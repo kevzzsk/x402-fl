@@ -44,10 +44,10 @@ pnpm install
 pnpm dev
 ```
 
-Fund an account with USDC:
+Fund an account with 100 USDC:
 
 ```bash
-x402-fl fund 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 100
+x402-fl fund 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100
 ```
 
 ## CLI Commands
