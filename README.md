@@ -103,10 +103,6 @@ The facilitator uses Anvil's default deterministic account (index 0). **Do not u
 
 Any address can be funded using `x402-fl fund`.
 
-## How it works
-
-Anvil forks Base mainnet at the latest block, giving you a local copy of all on-chain state including the USDC contract. The `fund` command uses `anvil_setStorageAt` to directly write ERC-20 balance values into contract storage — it auto-detects the correct storage slot by probing common mapping layouts (slots 0–20). The facilitator server exposes `/verify`, `/settle`, `/supported`, and `/health` endpoints using the `@x402/core` and `@x402/evm` packages, operating against the local Anvil fork instead of real Base mainnet.
-
 ## Roadmap
 
 - [ ] Custom ERC-20 token support
