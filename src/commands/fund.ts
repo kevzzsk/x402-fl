@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import boxen from "boxen";
+import type { Command } from "commander";
 import {
   createTestClient,
   http,
@@ -10,8 +11,37 @@ import {
   toHex,
 } from "viem";
 import { createLocalChain, fetchChainId } from "../lib/chain.js";
-import { DEFAULT_DECIMALS, formatTokenAmount, parseTokenAmount, USDC_ADDRESS } from "../lib/config.js";
+import { defaults, DEFAULT_DECIMALS, formatTokenAmount, parseTokenAmount, USDC_ADDRESS } from "../lib/config.js";
+import { parseAddress, parseAmount, parsePort } from "../lib/parsers.js";
 import { ERC20_ABI } from "../lib/abi.js";
+
+export function register(program: Command) {
+  program
+    .command("fund")
+    .description("Fund an address with USDC on local Anvil")
+    .argument("<address>", "0x-prefixed Ethereum address to fund", parseAddress)
+    .argument("<amount>", "USDC amount (e.g. '100' or '1.5')", parseAmount)
+    .option(
+      "--anvil-port <number>",
+      `Anvil JSON-RPC port`,
+      parsePort,
+      defaults.anvilPort,
+    )
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ x402-fl fund 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100
+  $ x402-fl fund 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 1.5 --anvil-port 9545`,
+    )
+    .action(async (address: `0x${string}`, amount: string, opts) => {
+      await fundCommand({
+        address,
+        amount,
+        anvilPort: opts.anvilPort,
+      });
+    });
+}
 
 export interface FundOptions {
   address: `0x${string}`;

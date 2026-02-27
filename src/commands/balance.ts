@@ -1,12 +1,41 @@
 import chalk from "chalk";
 import boxen from "boxen";
+import type { Command } from "commander";
 import { createPublicClient, fetchChainId } from "../lib/chain.js";
 import {
+  defaults,
   DEFAULT_DECIMALS,
   formatTokenAmount,
   USDC_ADDRESS,
 } from "../lib/config.js";
+import { parseAddress, parsePort } from "../lib/parsers.js";
 import { ERC20_ABI } from "../lib/abi.js";
+
+export function register(program: Command) {
+  program
+    .command("balance")
+    .description("Get USDC balance for an address on local Anvil")
+    .argument("<address>", "0x-prefixed Ethereum address to check", parseAddress)
+    .option(
+      "--anvil-port <number>",
+      `Anvil JSON-RPC port`,
+      parsePort,
+      defaults.anvilPort,
+    )
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ x402-fl balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  $ x402-fl balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --anvil-port 9545`,
+    )
+    .action(async (address: `0x${string}`, opts) => {
+      await balanceCommand({
+        address,
+        anvilPort: opts.anvilPort,
+      });
+    });
+}
 
 export interface BalanceOptions {
   address: `0x${string}`;

@@ -1,13 +1,57 @@
 import chalk from "chalk";
 import boxen from "boxen";
+import type { Command } from "commander";
 import type { ChildProcess } from "child_process";
 import type { Server } from "http";
 import { startAnvil, waitForAnvil } from "../lib/anvil.js";
 import { startFacilitator } from "../lib/facilitator.js";
 import { fetchChainId } from "../lib/chain.js";
-import { accounts, networkId, USDC_ADDRESS } from "../lib/config.js";
+import { accounts, defaults, networkId, USDC_ADDRESS } from "../lib/config.js";
+import { parsePort } from "../lib/parsers.js";
 import { resolvePort } from "../lib/port.js";
 import { setVerbosity } from "../lib/log.js";
+
+export function register(program: Command) {
+  program
+    .command("dev")
+    .description(
+      "Start Anvil fork + facilitator server for local x402 development",
+    )
+    .option(
+      "--port <number>",
+      `facilitator server port`,
+      parsePort,
+      defaults.facilitatorPort,
+    )
+    .option(
+      "--anvil-port <number>",
+      `Anvil JSON-RPC port`,
+      parsePort,
+      defaults.anvilPort,
+    )
+    .option("--rpc-url <url>", `Base mainnet RPC URL to fork (default: ${defaults.rpcUrl})`)
+    .option("-v, --verbose", "verbose output (-v facilitator logs, -vv anvil logs)", (_: string, prev: number) => prev + 1, 0)
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ x402-fl dev
+  $ x402-fl dev --rpc-url https://custom-rpc.example.com --port 5000`,
+    )
+    .action(async (opts, command) => {
+      const rpcUrl = opts.rpcUrl || defaults.rpcUrl;
+
+      await devCommand({
+        port: opts.port,
+        anvilPort: opts.anvilPort,
+        rpcUrl,
+        portExplicit: command.getOptionValueSource("port") !== "default",
+        anvilPortExplicit:
+          command.getOptionValueSource("anvilPort") !== "default",
+        verbose: opts.verbose,
+      });
+    });
+}
 
 export interface DevOptions {
   port: number;
