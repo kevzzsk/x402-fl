@@ -1,7 +1,11 @@
 import chalk from "chalk";
 import boxen from "boxen";
 import { createPublicClient, fetchChainId } from "../lib/chain.js";
-import { DEFAULT_DECIMALS, formatTokenAmount, USDC_ADDRESS } from "../lib/config.js";
+import {
+  DEFAULT_DECIMALS,
+  formatTokenAmount,
+  USDC_ADDRESS,
+} from "../lib/config.js";
 import { ERC20_ABI } from "../lib/abi.js";
 
 export interface BalanceOptions {
@@ -11,7 +15,7 @@ export interface BalanceOptions {
 
 export async function balanceCommand(options: BalanceOptions): Promise<void> {
   const { address, anvilPort } = options;
-  const rpcUrl = `http://127.0.0.1:${anvilPort}`;
+  const rpcUrl = `http://localhost:${anvilPort}`;
 
   let chainId: number;
   try {
@@ -19,7 +23,7 @@ export async function balanceCommand(options: BalanceOptions): Promise<void> {
   } catch {
     console.error(
       `Error: Could not connect to Anvil at ${rpcUrl}.\n` +
-        `Make sure Anvil is running (e.g. "x402-fl dev" or "anvil --fork-url ...").`
+        `Make sure Anvil is running (e.g. "x402-fl dev" or "anvil --fork-url ...").`,
     );
     process.exit(1);
   }
@@ -44,12 +48,19 @@ export async function balanceCommand(options: BalanceOptions): Promise<void> {
     args: [address],
   });
 
-  console.log(boxen(
-    [
-      `${chalk.dim("Token")}    ${USDC_ADDRESS}`,
-      `${chalk.dim("Address")}  ${address}`,
-      `${chalk.dim("Balance")}  ${chalk.green.bold(formatTokenAmount(balance, decimals))} USDC`,
-    ].join("\n"),
-    { title: "USDC Balance", padding: 1, borderStyle: "round", borderColor: "cyan" },
-  ));
+  console.log(
+    boxen(
+      [
+        `${chalk.dim("Token")}    ${USDC_ADDRESS}`,
+        `${chalk.dim("Address")}  ${address}`,
+        `${chalk.dim("Balance")}  ${chalk.green.bold(formatTokenAmount(balance, decimals))} USDC`,
+      ].join("\n"),
+      {
+        title: "USDC Balance",
+        padding: 1,
+        borderStyle: "round",
+        borderColor: "cyan",
+      },
+    ),
+  );
 }

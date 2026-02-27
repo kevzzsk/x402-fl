@@ -20,9 +20,12 @@ export function startAnvil(options: AnvilOptions): ChildProcess {
   }
 
   const args = [
-    "--fork-url", options.forkUrl,
-    "--chain-id", String(options.chainId),
-    "--port", String(options.port),
+    "--fork-url",
+    options.forkUrl,
+    "--chain-id",
+    String(options.chainId),
+    "--port",
+    String(options.port),
   ];
 
   const proc = spawn("anvil", args, {
@@ -42,7 +45,10 @@ export function startAnvil(options: AnvilOptions): ChildProcess {
   return proc;
 }
 
-export async function waitForAnvil(rpcUrl: string, timeoutMs = 30_000): Promise<void> {
+export async function waitForAnvil(
+  rpcUrl: string,
+  timeoutMs = 30_000,
+): Promise<void> {
   const start = Date.now();
   const client = viemCreatePublicClient({ transport: http(rpcUrl) });
 

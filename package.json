@@ -1,7 +1,7 @@
 {
   "name": "x402-fl",
   "version": "0.0.0",
-  "description": "Local x402 facilitator dev tool — spin up Anvil + facilitator for local x402 development",
+  "description": "Local x402 facilitator dev tool, spin up Anvil + facilitator for local x402 development",
   "type": "module",
   "bin": {
     "x402-fl": "./dist/cli.js"
