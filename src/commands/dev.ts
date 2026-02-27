@@ -5,16 +5,22 @@ import type { Server } from "http";
 import { startAnvil, waitForAnvil } from "../lib/anvil.js";
 import { startFacilitator } from "../lib/facilitator.js";
 import { fetchChainId } from "../lib/chain.js";
-import { accounts, defaults, networkId, USDC_ADDRESS } from "../lib/config.js";
+import { accounts, networkId, USDC_ADDRESS } from "../lib/config.js";
+import { resolvePort } from "../lib/port.js";
 
 export interface DevOptions {
   port: number;
   anvilPort: number;
   rpcUrl: string;
+  portExplicit: boolean;
+  anvilPortExplicit: boolean;
 }
 
 export async function devCommand(options: DevOptions): Promise<void> {
-  const localRpcUrl = `http://localhost:${options.anvilPort}`;
+  const anvilPort = await resolvePort(options.anvilPort, options.anvilPortExplicit, "Anvil");
+  const facilitatorPort = await resolvePort(options.port, options.portExplicit, "Facilitator");
+
+  const localRpcUrl = `http://localhost:${anvilPort}`;
   let anvilProc: ChildProcess | null = null;
   let server: Server | null = null;
 
@@ -51,12 +57,12 @@ export async function devCommand(options: DevOptions): Promise<void> {
   // 1. Start Anvil
   console.log(
     chalk.dim(
-      `Starting Anvil (forking chain ${chainId}, port ${options.anvilPort})...`,
+      `Starting Anvil (forking chain ${chainId}, port ${anvilPort})...`,
     ),
   );
   anvilProc = startAnvil({
     forkUrl: options.rpcUrl,
-    port: options.anvilPort,
+    port: anvilPort,
     chainId,
   });
 
@@ -73,9 +79,9 @@ export async function devCommand(options: DevOptions): Promise<void> {
   console.log(chalk.dim("Anvil is ready."));
 
   // 3. Start facilitator
-  console.log(chalk.dim(`Starting facilitator on port ${options.port}...`));
+  console.log(chalk.dim(`Starting facilitator on port ${facilitatorPort}...`));
   server = await startFacilitator({
-    port: options.port,
+    port: facilitatorPort,
     rpcUrl: localRpcUrl,
     chainId,
   });
@@ -87,7 +93,7 @@ export async function devCommand(options: DevOptions): Promise<void> {
     boxen(
       [
         `${chalk.dim("Anvil RPC")}     ${chalk.cyan(localRpcUrl)}`,
-        `${chalk.dim("Facilitator")}   ${chalk.cyan(`http://localhost:${options.port}`)}`,
+        `${chalk.dim("Facilitator")}   ${chalk.cyan(`http://localhost:${facilitatorPort}`)}`,
         `${chalk.dim("Network")}       ${network}`,
         `${chalk.dim("Chain ID")}      ${chainId}`,
         "",

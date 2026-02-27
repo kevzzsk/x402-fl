@@ -17,35 +17,37 @@ Local x402 facilitator for development and testing. Forks Base mainnet with Foun
 - Node.js 18+
 - [pnpm](https://pnpm.io/)
 - [Foundry](https://www.getfoundry.sh/introduction/installation) (provides `anvil`)
-- A Base mainnet RPC URL (e.g. `https://mainnet.base.org`, Alchemy, or Infura)
 
 ## Quick Start
+
+Try it instantly with npx:
+
+```bash
+npx x402-fl dev
+```
+
+Or install globally:
+
+```bash
+npm install -g x402-fl
+x402-fl dev
+```
+
+This starts Anvil on port 8545 and launches the facilitator on port 4022.
+
+### From source
 
 ```bash
 git clone https://github.com/anthropics/x402-fl.git
 cd x402-fl
 pnpm install
-```
-
-Create a `.env` file:
-
-```bash
-cp .env.example .env
-# Edit .env and set BASE_RPC_URL
-```
-
-Start the local environment:
-
-```bash
 pnpm dev
 ```
-
-This starts Anvil on port 8545 and launches the facilitator on port 4022.
 
 Fund an account with USDC:
 
 ```bash
-npx tsx src/cli.ts fund 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 100
+x402-fl fund 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 100
 ```
 
 ## CLI Commands
@@ -55,21 +57,21 @@ npx tsx src/cli.ts fund 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 100
 Start Anvil fork + facilitator server for local x402 development.
 
 ```bash
-pnpm dev [options]
+x402-fl dev [options]
 ```
 
-| Flag                    | Default                | Description           |
-| ----------------------- | ---------------------- | --------------------- |
-| `--port <number>`       | `4022`                 | Facilitator HTTP port |
-| `--anvil-port <number>` | `8545`                 | Anvil RPC port        |
-| `--rpc-url <url>`       | `BASE_RPC_URL` env var | Base RPC URL to fork  |
+| Flag                    | Default                    | Description           |
+| ----------------------- | -------------------------- | --------------------- |
+| `--port <number>`       | `4022`                     | Facilitator HTTP port |
+| `--anvil-port <number>` | `8545`                     | Anvil RPC port        |
+| `--rpc-url <url>`       | `https://mainnet.base.org` | Base RPC URL to fork  |
 
 ### `fund`
 
 Fund any address with USDC on the local Anvil fork.
 
 ```bash
-npx tsx src/cli.ts fund <address> <amount> [options]
+x402-fl fund <address> <amount> [options]
 ```
 
 | Argument / Flag         | Default  | Description                                       |
@@ -83,7 +85,7 @@ npx tsx src/cli.ts fund <address> <amount> [options]
 Check USDC balance for an address on the local Anvil fork.
 
 ```bash
-npx tsx src/cli.ts balance <address> [options]
+x402-fl balance <address> [options]
 ```
 
 | Argument / Flag         | Default  | Description                  |

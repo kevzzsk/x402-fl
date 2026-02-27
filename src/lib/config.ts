@@ -1,3 +1,4 @@
+import { formatUnits, parseUnits } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 
 // Anvil default mnemonic — first account (index 0) is the facilitator
@@ -15,6 +16,7 @@ export const accounts = {
 export const defaults = {
   anvilPort: 8545,
   facilitatorPort: 4022,
+  rpcUrl: "https://mainnet.base.org",
 } as const;
 
 export function networkId(chainId: number): `eip155:${number}` {
@@ -27,14 +29,9 @@ export const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x$
 export const DEFAULT_DECIMALS = 6;
 
 export function parseTokenAmount(amount: string, decimals = DEFAULT_DECIMALS): bigint {
-  const [whole, frac = ""] = amount.split(".");
-  const padded = frac.padEnd(decimals, "0").slice(0, decimals);
-  return BigInt(whole + padded);
+  return parseUnits(amount, decimals);
 }
 
 export function formatTokenAmount(raw: bigint, decimals = DEFAULT_DECIMALS): string {
-  const str = raw.toString().padStart(decimals + 1, "0");
-  const whole = str.slice(0, -decimals);
-  const frac = str.slice(-decimals).replace(/0+$/, "") || "0";
-  return `${whole}.${frac}`;
+  return formatUnits(raw, decimals);
 }

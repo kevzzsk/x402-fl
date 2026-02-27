@@ -2,12 +2,11 @@
 
 import { readFileSync } from "fs";
 import { Command, InvalidArgumentError } from "commander";
-import dotenv from "dotenv";
 import { defaults } from "./lib/config.js";
 
-const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
-
-dotenv.config();
+const pkg = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
+);
 
 function parsePort(value: string): number {
   const port = parseInt(value, 10);
@@ -44,7 +43,7 @@ program
       "  Spin up a local Anvil fork and x402 facilitator server for development.\n" +
       "  Requires `anvil` (from Foundry) to be installed and available in PATH.\n\n" +
       "  Quick start:\n" +
-      "    $ x402-fl dev --rpc-url https://mainnet.base.org\n" +
+      "    $ x402-fl dev\n" +
       "    $ x402-fl fund 0xYourAddress 100",
   )
   .version(pkg.version)
@@ -58,48 +57,35 @@ program
   )
   .option(
     "--port <number>",
-    `facilitator server port (default: ${defaults.facilitatorPort})`,
+    `facilitator server port`,
     parsePort,
     defaults.facilitatorPort,
   )
   .option(
     "--anvil-port <number>",
-    `Anvil JSON-RPC port (default: ${defaults.anvilPort})`,
+    `Anvil JSON-RPC port`,
     parsePort,
     defaults.anvilPort,
   )
-  .option(
-    "--rpc-url <url>",
-    "Base mainnet RPC URL to fork (or set BASE_RPC_URL in .env)",
-  )
+  .option("--rpc-url <url>", `Base mainnet RPC URL to fork (default: ${defaults.rpcUrl})`)
   .addHelpText(
     "after",
     `
 Examples:
-  $ x402-fl dev --rpc-url https://mainnet.base.org
-  $ x402-fl dev --rpc-url $BASE_RPC_URL --port 5000 --anvil-port 9545
-
-Environment variables:
-  BASE_RPC_URL    Fallback RPC URL when --rpc-url is not provided`,
+  $ x402-fl dev
+  $ x402-fl dev --rpc-url https://custom-rpc.example.com --port 5000`,
   )
-  .action(async (opts) => {
-    const rpcUrl = opts.rpcUrl || process.env.BASE_RPC_URL;
-    if (!rpcUrl) {
-      program.error(
-        "missing required RPC URL\n\n" +
-          "  Provide one of:\n" +
-          "    --rpc-url <url>          pass directly as a flag\n" +
-          "    BASE_RPC_URL=<url>       set in .env or environment\n\n" +
-          "  Example:\n" +
-          "    $ x402-fl dev --rpc-url https://mainnet.base.org",
-      );
-    }
+  .action(async (opts, command) => {
+    const rpcUrl = opts.rpcUrl || defaults.rpcUrl;
 
     const { devCommand } = await import("./commands/dev.js");
     await devCommand({
       port: opts.port,
       anvilPort: opts.anvilPort,
       rpcUrl,
+      portExplicit: command.getOptionValueSource("port") !== "default",
+      anvilPortExplicit:
+        command.getOptionValueSource("anvilPort") !== "default",
     });
   });
 
@@ -107,11 +93,7 @@ program
   .command("fund")
   .description("Fund an address with USDC on local Anvil")
   .argument("<address>", "0x-prefixed Ethereum address to fund", parseAddress)
-  .argument(
-    "<amount>",
-    "USDC amount (e.g. '100' or '1.5')",
-    parseAmount,
-  )
+  .argument("<amount>", "USDC amount (e.g. '100' or '1.5')", parseAmount)
   .option(
     "--anvil-port <number>",
     `Anvil JSON-RPC port`,
