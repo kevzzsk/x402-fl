@@ -18,18 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     environment: NPM
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "18"
           registry-url: https://registry.npmjs.org
           cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
 
       - name: Extract and validate version from tag
         id: info
@@ -52,6 +49,9 @@ jobs:
             echo "dist_tag=latest" >> $GITHUB_OUTPUT
           fi
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Build
         run: pnpm build
 
@@ -61,4 +61,4 @@ jobs:
           sed -i 's/"version": "0.0.0"/"version": "'"$VERSION"'"/g' package.json
 
       - name: Publish
-        run: npm publish --access public --tag ${{ steps.info.outputs.dist_tag }} --provenance
+        run: npm publish --access public --tag ${{ steps.info.outputs.dist_tag }}

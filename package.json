@@ -4,7 +4,7 @@
   "description": "Local x402 facilitator dev tool, spin up Anvil + facilitator for local x402 development",
   "type": "module",
   "bin": {
-    "x402-fl": "./dist/cli.js"
+    "x402-fl": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
