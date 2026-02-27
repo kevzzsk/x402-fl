@@ -57,7 +57,7 @@ x402-fl fund 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100
 
 ## CLI Commands
 
-### `dev`
+### `x402-fl dev`
 
 Start Anvil fork + facilitator server for local x402 development.
 
@@ -78,7 +78,7 @@ x402-fl dev [options]
 
 > **Note**: anvil state is not persisted.
 
-### `fund`
+### `x402-fl fund`
 
 Fund any address with USDC on the local Anvil fork.
 
@@ -92,7 +92,7 @@ x402-fl fund <address> <amount> [options]
 | `<amount>`              | required | USDC amount in major units (human-readable, e.g. `100` or `1.5`) |
 | `--anvil-port <number>` | `8545`   | Anvil RPC port                                                   |
 
-### `balance`
+### `x402-fl balance`
 
 Check USDC balance for an address on the local Anvil fork.
 
