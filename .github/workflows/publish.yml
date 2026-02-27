@@ -62,5 +62,3 @@ jobs:
 
       - name: Publish
         run: npm publish --access public --tag ${{ steps.info.outputs.dist_tag }} --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
