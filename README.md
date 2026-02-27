@@ -60,11 +60,13 @@ Start Anvil fork + facilitator server for local x402 development.
 x402-fl dev [options]
 ```
 
-| Flag                    | Default                    | Description           |
-| ----------------------- | -------------------------- | --------------------- |
-| `--port <number>`       | `4022`                     | Facilitator HTTP port |
-| `--anvil-port <number>` | `8545`                     | Anvil RPC port        |
-| `--rpc-url <url>`       | `https://mainnet.base.org` | Base RPC URL to fork  |
+| Flag                    | Default                    | Description                                          |
+| ----------------------- | -------------------------- | ---------------------------------------------------- |
+| `--port <number>`       | `4022`                     | Facilitator HTTP port                                |
+| `--anvil-port <number>` | `8545`                     | Anvil RPC port                                       |
+| `--rpc-url <url>`       | `https://mainnet.base.org` | Base RPC URL to fork                                 |
+| `-v`                    |                            | Show facilitator request logs                        |
+| `-vv`                   |                            | Show facilitator request logs and Anvil process logs |
 
 ### `fund`
 

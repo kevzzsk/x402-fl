@@ -6,6 +6,7 @@ import { toFacilitatorEvmSigner } from "@x402/evm";
 import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import { createWalletClient } from "./chain.js";
 import { accounts, networkId } from "./config.js";
+import { verboseLog1 } from "./log.js";
 
 export interface FacilitatorOptions {
   port: number;
@@ -41,7 +42,7 @@ export function startFacilitator(options: FacilitatorOptions): Promise<Server> {
   app.use((req, res, next) => {
     const start = Date.now();
     res.on("finish", () => {
-      console.log(`[facilitator] ${req.method} ${req.path} ${res.statusCode} (${Date.now() - start}ms)`);
+      verboseLog1(`[facilitator] ${req.method} ${req.path} ${res.statusCode} (${Date.now() - start}ms)`);
     });
     next();
   });

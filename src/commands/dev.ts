@@ -7,6 +7,7 @@ import { startFacilitator } from "../lib/facilitator.js";
 import { fetchChainId } from "../lib/chain.js";
 import { accounts, networkId, USDC_ADDRESS } from "../lib/config.js";
 import { resolvePort } from "../lib/port.js";
+import { setVerbosity } from "../lib/log.js";
 
 export interface DevOptions {
   port: number;
@@ -14,9 +15,12 @@ export interface DevOptions {
   rpcUrl: string;
   portExplicit: boolean;
   anvilPortExplicit: boolean;
+  verbose: number;
 }
 
 export async function devCommand(options: DevOptions): Promise<void> {
+  setVerbosity(options.verbose);
+
   const anvilPort = await resolvePort(options.anvilPort, options.anvilPortExplicit, "Anvil");
   const facilitatorPort = await resolvePort(options.port, options.portExplicit, "Facilitator");
 

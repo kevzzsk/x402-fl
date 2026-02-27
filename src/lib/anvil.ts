@@ -1,5 +1,6 @@
 import { execSync, spawn, type ChildProcess } from "child_process";
 import { createPublicClient as viemCreatePublicClient, http } from "viem";
+import { verboseLog2 } from "./log.js";
 
 export interface AnvilOptions {
   forkUrl: string;
@@ -34,12 +35,12 @@ export function startAnvil(options: AnvilOptions): ChildProcess {
 
   proc.stdout?.on("data", (data: Buffer) => {
     const line = data.toString().trim();
-    if (line) console.log(`[anvil] ${line}`);
+    if (line) verboseLog2(`[anvil] ${line}`);
   });
 
   proc.stderr?.on("data", (data: Buffer) => {
     const line = data.toString().trim();
-    if (line) console.error(`[anvil] ${line}`);
+    if (line) verboseLog2(`[anvil] ${line}`);
   });
 
   return proc;

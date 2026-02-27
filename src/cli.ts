@@ -71,6 +71,7 @@ program
     defaults.anvilPort,
   )
   .option("--rpc-url <url>", `Base mainnet RPC URL to fork (default: ${defaults.rpcUrl})`)
+  .option("-v, --verbose", "verbose output (-v facilitator logs, -vv anvil logs)", (_: string, prev: number) => prev + 1, 0)
   .addHelpText(
     "after",
     `
@@ -88,6 +89,7 @@ Examples:
       portExplicit: command.getOptionValueSource("port") !== "default",
       anvilPortExplicit:
         command.getOptionValueSource("anvilPort") !== "default",
+      verbose: opts.verbose,
     });
   });
 
