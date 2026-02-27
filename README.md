@@ -1,21 +1,25 @@
-# x402-fl
+# x402-fl: Local x402 Payment Facilitator
 
 [![npm version](https://img.shields.io/npm/v/x402-fl)](https://www.npmjs.com/package/x402-fl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Local x402 facilitator for development and testing. Forks Base mainnet with Foundry Anvil and runs a local facilitator server.
+A local [x402](https://www.x402.org/) facilitator for development and testing. One command gives you a fully functional x402 payment environment: a forked Base mainnet via Foundry Anvil paired with a local facilitator server. Build and test x402-powered apps without touching real funds.
 
-> **Warning**: This is for local development only. Do NOT use in production. It uses Anvil's well-known deterministic private keys, which are publicly known and have zero security.
+> **Warning**: Local development only. Uses Anvil's deterministic private keys, which are publicly known and provide zero security. Do not use in production.
 
-> **Note**: Currently only USDC on Base is supported. Custom ERC-20 token support is on the [roadmap](#roadmap).
+> **Note**: Currently supports USDC on Base. Custom ERC-20 token support is on the [roadmap](#roadmap).
 
 ## What it does
 
-`x402-fl` spins up a complete local x402 payment environment in one command:
+```
+npx x402-fl dev
+```
 
-1. Forks Base mainnet using Anvil (so you get real USDC contract state)
-2. Starts a local facilitator server that can verify and settle x402 payments
-3. Provides a `fund` command to mint USDC to any address via Anvil storage manipulation
+That's it. Behind the scenes, `x402-fl`:
+
+1. **Forks Base mainnet** using Anvil with real USDC contract state, at zero cost
+2. **Starts a facilitator server** that verifies and settles x402 payments locally
+3. **Provides a `fund` command** to mint USDC to any address instantly
 
 ## Prerequisites
 
