@@ -1,0 +1,66 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish [npm]
+    runs-on: ubuntu-latest
+    environment: NPM
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Extract and validate version from tag
+        id: info
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+
+          if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "Error: Tag must be in format v0.0.0 (e.g., v1.0.0, v1.0.0-beta.1)"
+            echo "Received: $TAG"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          if [[ "$VERSION" == *-* ]]; then
+            echo "dist_tag=next" >> $GITHUB_OUTPUT
+          else
+            echo "dist_tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build
+        run: pnpm build
+
+      - name: Set version
+        run: |
+          VERSION="${{ steps.info.outputs.version }}"
+          sed -i 's/"version": "0.0.0"/"version": "'"$VERSION"'"/g' package.json
+
+      - name: Publish
+        run: npm publish --access public --tag ${{ steps.info.outputs.dist_tag }} --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
