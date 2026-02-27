@@ -3,6 +3,9 @@
 import { readFileSync } from "fs";
 import { Command, InvalidArgumentError } from "commander";
 import { defaults } from "./lib/config.js";
+import { devCommand } from "./commands/dev.js";
+import { fundCommand } from "./commands/fund.js";
+import { balanceCommand } from "./commands/balance.js";
 
 const pkg = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
@@ -78,7 +81,6 @@ Examples:
   .action(async (opts, command) => {
     const rpcUrl = opts.rpcUrl || defaults.rpcUrl;
 
-    const { devCommand } = await import("./commands/dev.js");
     await devCommand({
       port: opts.port,
       anvilPort: opts.anvilPort,
@@ -108,7 +110,6 @@ Examples:
   $ x402-fl fund 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 1.5 --anvil-port 9545`,
   )
   .action(async (address: `0x${string}`, amount: string, opts) => {
-    const { fundCommand } = await import("./commands/fund.js");
     await fundCommand({
       address,
       amount,
@@ -134,7 +135,6 @@ Examples:
   $ x402-fl balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --anvil-port 9545`,
   )
   .action(async (address: `0x${string}`, opts) => {
-    const { balanceCommand } = await import("./commands/balance.js");
     await balanceCommand({
       address,
       anvilPort: opts.anvilPort,
