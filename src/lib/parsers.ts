@@ -17,6 +17,15 @@ export function parseAddress(value: string): `0x${string}` {
   return value as `0x${string}`;
 }
 
+export function parsePrivateKey(value: string): `0x${string}` {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(value)) {
+    throw new InvalidArgumentError(
+      "must be a valid 0x-prefixed private key (66 characters)",
+    );
+  }
+  return value as `0x${string}`;
+}
+
 export function parseAmount(value: string): string {
   if (!/^\d+(\.\d+)?$/.test(value) || Number(value) <= 0) {
     throw new InvalidArgumentError(

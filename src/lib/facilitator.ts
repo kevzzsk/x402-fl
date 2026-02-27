@@ -12,17 +12,25 @@ export interface FacilitatorOptions {
   port: number;
   rpcUrl: string;
   chainId: number;
+  privateKey?: `0x${string}`;
 }
 
-export function startFacilitator(options: FacilitatorOptions): Promise<Server> {
+export interface FacilitatorResult {
+  server: Server;
+  address: `0x${string}`;
+}
+
+export function startFacilitator(options: FacilitatorOptions): Promise<FacilitatorResult> {
+  const privateKey = options.privateKey ?? accounts.facilitator.privateKey;
+
   const viemClient = createWalletClient(
-    accounts.facilitator.privateKey,
+    privateKey,
     options.rpcUrl,
     options.chainId,
   );
 
   const evmSigner = toFacilitatorEvmSigner({
-    address: accounts.facilitator.address,
+    address: viemClient.account.address,
     readContract: (args) => viemClient.readContract(args),
     verifyTypedData: (args) => viemClient.verifyTypedData(args as any),
     writeContract: (args) => viemClient.writeContract(args),
@@ -117,13 +125,13 @@ export function startFacilitator(options: FacilitatorOptions): Promise<Server> {
     res.json({
       status: "ok",
       network,
-      facilitator: accounts.facilitator.address,
+      facilitator: viemClient.account.address,
     });
   });
 
-  return new Promise<Server>((resolve, reject) => {
+  return new Promise<FacilitatorResult>((resolve, reject) => {
     const server = app.listen(options.port, () => {
-      resolve(server);
+      resolve({ server, address: viemClient.account.address });
     });
     server.on("error", reject);
   });

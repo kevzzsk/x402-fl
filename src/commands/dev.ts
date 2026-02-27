@@ -6,8 +6,8 @@ import type { Server } from "http";
 import { startAnvil, waitForAnvil } from "../lib/anvil.js";
 import { startFacilitator } from "../lib/facilitator.js";
 import { fetchChainId } from "../lib/chain.js";
-import { accounts, defaults, networkId, USDC_ADDRESS } from "../lib/config.js";
-import { parsePort } from "../lib/parsers.js";
+import { defaults, networkId, USDC_ADDRESS } from "../lib/config.js";
+import { parsePort, parsePrivateKey } from "../lib/parsers.js";
 import { resolvePort } from "../lib/port.js";
 import { setVerbosity } from "../lib/log.js";
 
@@ -30,6 +30,7 @@ export function register(program: Command) {
       defaults.anvilPort,
     )
     .option("--rpc-url <url>", `Base mainnet RPC URL to fork (default: ${defaults.rpcUrl})`)
+    .option("--private-key <key>", "facilitator private key (default: Anvil account 0)", parsePrivateKey)
     .option("-v, --verbose", "verbose output (-v facilitator logs, -vv anvil logs)", (_: string, prev: number) => prev + 1, 0)
     .addHelpText(
       "after",
@@ -45,6 +46,7 @@ Examples:
         port: opts.port,
         anvilPort: opts.anvilPort,
         rpcUrl,
+        privateKey: opts.privateKey,
         portExplicit: command.getOptionValueSource("port") !== "default",
         anvilPortExplicit:
           command.getOptionValueSource("anvilPort") !== "default",
@@ -57,6 +59,7 @@ export interface DevOptions {
   port: number;
   anvilPort: number;
   rpcUrl: string;
+  privateKey?: `0x${string}`;
   portExplicit: boolean;
   anvilPortExplicit: boolean;
   verbose: number;
@@ -128,11 +131,13 @@ export async function devCommand(options: DevOptions): Promise<void> {
 
   // 3. Start facilitator
   console.log(chalk.dim(`Starting facilitator on port ${facilitatorPort}...`));
-  server = await startFacilitator({
+  const facilitator = await startFacilitator({
     port: facilitatorPort,
     rpcUrl: localRpcUrl,
     chainId,
+    privateKey: options.privateKey,
   });
+  server = facilitator.server;
 
   const network = networkId(chainId);
 
@@ -146,7 +151,7 @@ export async function devCommand(options: DevOptions): Promise<void> {
         `${chalk.dim("Chain ID")}      ${chainId}`,
         "",
         chalk.dim("Accounts"),
-        `  ${chalk.dim("Facilitator")}  ${accounts.facilitator.address}`,
+        `  ${chalk.dim("Facilitator")}  ${facilitator.address}`,
         "",
         `${chalk.dim("USDC")}          ${USDC_ADDRESS}`,
         "",

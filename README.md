@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/x402-fl)](https://www.npmjs.com/package/x402-fl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Local x402 facilitator for development and testing. Forks Base mainnet with Foundry Anvil and runs a local facilitator server. Fund any address with USDC via direct storage manipulation.
+Local x402 facilitator for development and testing. Forks Base mainnet with Foundry Anvil and runs a local facilitator server.
 
 > **Warning**: This is for local development only. Do NOT use in production. It uses Anvil's well-known deterministic private keys, which are publicly known and have zero security.
 
@@ -65,13 +65,16 @@ Start Anvil fork + facilitator server for local x402 development.
 x402-fl dev [options]
 ```
 
-| Flag                    | Default                    | Description                                          |
-| ----------------------- | -------------------------- | ---------------------------------------------------- |
-| `--port <number>`       | `4022`                     | Facilitator HTTP port                                |
-| `--anvil-port <number>` | `8545`                     | Anvil RPC port                                       |
-| `--rpc-url <url>`       | `https://mainnet.base.org` | Base RPC URL to fork                                 |
-| `-v`                    |                            | Show facilitator request logs                        |
-| `-vv`                   |                            | Show facilitator request logs and Anvil process logs |
+| Flag                    | Default                    | Description                                                   |
+| ----------------------- | -------------------------- | ------------------------------------------------------------- |
+| `--port <number>`       | `4022`                     | Facilitator HTTP port                                         |
+| `--anvil-port <number>` | `8545`                     | Anvil RPC port                                                |
+| `--rpc-url <url>`       | `https://mainnet.base.org` | Base RPC URL to fork                                          |
+| `-v`                    |                            | Show facilitator request logs                                 |
+| `-vv`                   |                            | Show facilitator request logs and Anvil process logs          |
+| `--private-key <key>`   |                            | Custom facilitator private key (prefer default Anvil account) |
+
+> **Warning**: `--private-key` is not recommended
 
 > **Note**: anvil state is not persisted.
 
