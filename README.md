@@ -1,6 +1,6 @@
 # x402-fl
 
-Local x402 facilitator for development and testing. Forks Base mainnet with Foundry Anvil, funds test accounts with real USDC, and runs a local facilitator server.
+Local x402 facilitator for development and testing. Forks Base mainnet with Foundry Anvil and runs a local facilitator server. Fund any address with USDC via direct storage manipulation.
 
 > **Warning**: This is for local development only. Do NOT use in production. It uses Anvil's well-known deterministic private keys, which are publicly known and have zero security.
 
@@ -9,14 +9,14 @@ Local x402 facilitator for development and testing. Forks Base mainnet with Foun
 `x402-fl` spins up a complete local x402 payment environment in one command:
 
 1. Forks Base mainnet using Anvil (so you get real USDC contract state)
-2. Impersonates a USDC whale to fund a test payer account
-3. Starts a local facilitator server that can verify and settle x402 payments
+2. Starts a local facilitator server that can verify and settle x402 payments
+3. Provides a `fund` command to mint USDC to any address via Anvil storage manipulation
 
 ## Prerequisites
 
 - Node.js 18+
 - [pnpm](https://pnpm.io/)
-- [Foundry](https://book.getfoundry.sh/getting-started/installation) (provides `anvil`)
+- [Foundry](https://www.getfoundry.sh/introduction/installation) (provides `anvil`)
 - A Base mainnet RPC URL (e.g. `https://mainnet.base.org`, Alchemy, or Infura)
 
 ## Quick Start
@@ -40,59 +40,81 @@ Start the local environment:
 pnpm dev
 ```
 
-This starts Anvil on port 8545, funds the payer account with 100 USDC, and launches the facilitator on port 4022.
+This starts Anvil on port 8545 and launches the facilitator on port 4022.
+
+Fund an account with USDC:
+
+```bash
+npx tsx src/cli.ts fund 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 100
+```
 
 ## CLI Commands
 
 ### `dev`
 
-Start Anvil fork + fund accounts + facilitator server.
+Start Anvil fork + facilitator server for local x402 development.
 
 ```bash
 pnpm dev [options]
 ```
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--port <number>` | `4022` | Facilitator HTTP port |
-| `--anvil-port <number>` | `8545` | Anvil RPC port |
-| `--rpc-url <url>` | `BASE_RPC_URL` env var | Base RPC URL to fork |
-| `--fund-amount <usdc>` | `100` | USDC to fund payer account |
+| Flag                    | Default                | Description           |
+| ----------------------- | ---------------------- | --------------------- |
+| `--port <number>`       | `4022`                 | Facilitator HTTP port |
+| `--anvil-port <number>` | `8545`                 | Anvil RPC port        |
+| `--rpc-url <url>`       | `BASE_RPC_URL` env var | Base RPC URL to fork  |
 
-### `test`
+### `fund`
 
-Run an end-to-end test against a running facilitator. Signs a payment, verifies it, settles it, and checks balances.
-
-```bash
-pnpm test:e2e [options]
-```
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--facilitator-url <url>` | `http://127.0.0.1:4022` | Facilitator URL |
-| `--amount <usdc>` | `1.00` | Payment amount to test |
-
-### `info`
-
-Print account addresses, ports, and config.
+Fund any address with USDC on the local Anvil fork.
 
 ```bash
-npx tsx src/cli.ts info
+npx tsx src/cli.ts fund <address> <amount> [options]
 ```
+
+| Argument / Flag         | Default  | Description                                       |
+| ----------------------- | -------- | ------------------------------------------------- |
+| `<address>`             | required | 0x-prefixed Ethereum address to fund              |
+| `<amount>`              | required | USDC amount (human-readable, e.g. `100` or `1.5`) |
+| `--anvil-port <number>` | `8545`   | Anvil RPC port                                    |
+
+### `balance`
+
+Check USDC balance for an address on the local Anvil fork.
+
+```bash
+npx tsx src/cli.ts balance <address> [options]
+```
+
+| Argument / Flag         | Default  | Description                  |
+| ----------------------- | -------- | ---------------------------- |
+| `<address>`             | required | 0x-prefixed Ethereum address |
+| `--anvil-port <number>` | `8545`   | Anvil RPC port               |
 
 ## Test Accounts
 
-These are Anvil's default deterministic accounts. **Do not use these keys for anything real.**
+The facilitator uses Anvil's default deterministic account (index 0). **Do not use these keys for anything real.**
 
-| Role | Address |
-|------|---------|
+| Role        | Address                                      |
+| ----------- | -------------------------------------------- |
 | Facilitator | `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` |
-| Payer | `0x70997970C51812dc3A010C7d01b50e0d17dc79C8` |
-| Recipient | `0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC` |
+
+Any address can be funded using `x402-fl fund`.
 
 ## How it works
 
-Anvil forks Base mainnet at the latest block, giving you a local copy of all on-chain state including the USDC contract. The tool then uses Anvil's `impersonateAccount` to transfer USDC from a known whale address (Circle's reserve) to the test payer account. The facilitator server exposes `/verify`, `/settle`, `/supported`, and `/health` endpoints using the `@x402/core` and `@x402/evm` packages, operating against the local Anvil fork instead of real Base mainnet.
+Anvil forks Base mainnet at the latest block, giving you a local copy of all on-chain state including the USDC contract. The `fund` command uses `anvil_setStorageAt` to directly write ERC-20 balance values into contract storage — it auto-detects the correct storage slot by probing common mapping layouts (slots 0–20). The facilitator server exposes `/verify`, `/settle`, `/supported`, and `/health` endpoints using the `@x402/core` and `@x402/evm` packages, operating against the local Anvil fork instead of real Base mainnet.
+
+## Roadmap
+
+- [ ] Custom ERC-20 token support
+- [ ] Custom Fork url
+- [ ] Dockerised anvil node
+- [ ] Testcontainers for facilitator + anvil for deterministic testing env
+
+## Issues
+
+Found a bug or have a feature request? [Open an issue](https://github.com/anthropics/x402-fl/issues).
 
 ## License
 

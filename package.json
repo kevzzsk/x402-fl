@@ -1,0 +1,41 @@
+{
+  "name": "x402-fl",
+  "version": "0.0.0",
+  "description": "Local x402 facilitator dev tool — spin up Anvil + facilitator for local x402 development",
+  "type": "module",
+  "bin": {
+    "x402-fl": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts dev"
+  },
+  "keywords": [
+    "x402",
+    "facilitator",
+    "local",
+    "development",
+    "anvil"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@x402/core": "^2.5.0",
+    "@x402/evm": "^2.5.0",
+    "boxen": "^8.0.1",
+    "chalk": "^5.6.2",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "viem": "^2.39.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=18"
+  }
+}

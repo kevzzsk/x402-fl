@@ -1,0 +1,129 @@
+import express from "express";
+import type { Server } from "http";
+import { x402Facilitator } from "@x402/core/facilitator";
+import type { PaymentPayload, PaymentRequirements } from "@x402/core/types";
+import { toFacilitatorEvmSigner } from "@x402/evm";
+import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
+import { createWalletClient } from "./chain.js";
+import { accounts, networkId } from "./config.js";
+
+export interface FacilitatorOptions {
+  port: number;
+  rpcUrl: string;
+  chainId: number;
+}
+
+export function startFacilitator(options: FacilitatorOptions): Promise<Server> {
+  const viemClient = createWalletClient(
+    accounts.facilitator.privateKey,
+    options.rpcUrl,
+    options.chainId,
+  );
+
+  const evmSigner = toFacilitatorEvmSigner({
+    address: accounts.facilitator.address,
+    readContract: (args) => viemClient.readContract(args),
+    verifyTypedData: (args) => viemClient.verifyTypedData(args as any),
+    writeContract: (args) => viemClient.writeContract(args),
+    sendTransaction: (args) => viemClient.sendTransaction(args),
+    waitForTransactionReceipt: (args) =>
+      viemClient.waitForTransactionReceipt(args),
+    getCode: (args) => viemClient.getCode(args),
+  });
+
+  const facilitator = new x402Facilitator();
+  const network = networkId(options.chainId);
+  facilitator.register(network, new ExactEvmScheme(evmSigner));
+
+  const app = express();
+  app.use(express.json());
+
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on("finish", () => {
+      console.log(`[facilitator] ${req.method} ${req.path} ${res.statusCode} (${Date.now() - start}ms)`);
+    });
+    next();
+  });
+
+  app.post("/verify", async (req, res) => {
+    try {
+      const { paymentPayload, paymentRequirements } = req.body as {
+        paymentPayload: PaymentPayload;
+        paymentRequirements: PaymentRequirements;
+      };
+
+      if (!paymentPayload || !paymentRequirements) {
+        res
+          .status(400)
+          .json({ error: "Missing paymentPayload or paymentRequirements" });
+        return;
+      }
+
+      const response = await facilitator.verify(
+        paymentPayload,
+        paymentRequirements,
+      );
+      res.json(response);
+    } catch (error) {
+      console.error("Verify error:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  app.post("/settle", async (req, res) => {
+    try {
+      const { paymentPayload, paymentRequirements } = req.body as {
+        paymentPayload: PaymentPayload;
+        paymentRequirements: PaymentRequirements;
+      };
+
+      if (!paymentPayload || !paymentRequirements) {
+        res
+          .status(400)
+          .json({ error: "Missing paymentPayload or paymentRequirements" });
+        return;
+      }
+
+      const response = await facilitator.settle(
+        paymentPayload,
+        paymentRequirements,
+      );
+      res.json(response);
+    } catch (error) {
+      console.error("Settle error:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  app.get("/supported", (_req, res) => {
+    try {
+      const response = facilitator.getSupported();
+      res.json(response);
+    } catch (error) {
+      console.error("Supported error:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  app.get("/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      network,
+      facilitator: accounts.facilitator.address,
+    });
+  });
+
+  return new Promise<Server>((resolve, reject) => {
+    const server = app.listen(options.port, () => {
+      resolve(server);
+    });
+    server.on("error", reject);
+  });
+}
