@@ -13,9 +13,7 @@
     }
   },
   "files": [
-    "dist",
-    "Dockerfile",
-    "pnpm-lock.yaml"
+    "dist"
   ],
   "scripts": {
     "build": "tsdown",
