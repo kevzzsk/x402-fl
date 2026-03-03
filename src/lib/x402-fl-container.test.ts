@@ -8,6 +8,14 @@ import {
   USDC_ADDRESS,
 } from "../testcontainers.js";
 import { ERC20_ABI } from "./abi.js";
+import {
+  createWalletClient,
+  http,
+  parseEther,
+  publicActions,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { createLocalChain } from "./chain.js";
 
 describe("X402FacilitatorLocalContainer", () => {
   let container: StartedX402FacilitatorLocalContainer;
@@ -53,6 +61,37 @@ describe("X402FacilitatorLocalContainer", () => {
     });
 
     expect(after - before).toStrictEqual(100_000_000n);
+  });
+
+  it("connects with viem and sends an ETH transfer", async () => {
+    const rpcUrl = container.getRpcUrl();
+    const chainId = await fetchChainId(rpcUrl);
+    const chain = createLocalChain(rpcUrl, chainId);
+
+    const account = privateKeyToAccount(accounts.facilitator.privateKey);
+    // Use a fresh address with no pre-seeded Anvil balance
+    const recipient = "0x000000000000000000000000000000000000bEEF" as `0x${string}`;
+
+    const client = createWalletClient({
+      account,
+      chain,
+      transport: http(rpcUrl),
+      cacheTime: 0,
+    }).extend(publicActions);
+
+    const balanceBefore = await client.getBalance({ address: recipient });
+    expect(balanceBefore).toBe(0n);
+
+    const hash = await client.sendTransaction({
+      to: recipient,
+      value: parseEther("1"),
+    });
+
+    const receipt = await client.waitForTransactionReceipt({ hash });
+    expect(receipt.status).toBe("success");
+
+    const balanceAfter = await client.getBalance({ address: recipient });
+    expect(balanceAfter).toBe(parseEther("1"));
   });
 
   it("withForkUrl is chainable", () => {
