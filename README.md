@@ -25,7 +25,9 @@ That's it. Behind the scenes, `x402-fl`:
 
 - Node.js 24+
 - [pnpm](https://pnpm.io/)
-- [Foundry](https://www.getfoundry.sh/introduction/installation) (provides `anvil`)
+- One of:
+  - [Foundry](https://www.getfoundry.sh/introduction/installation) (recommended, provides `anvil`)
+  - [Docker](https://docs.docker.com/get-docker/) (fallback, runs Anvil in a container)
 
 ## Quick Start
 
@@ -182,7 +184,7 @@ Any address can be funded using `x402-fl fund`.
 - [ ] Custom ERC-20 token support
 - [ ] Custom Fork url
 - [ ] Custom Fork block height
-- [ ] Dockerised anvil node (fallback when foundry is not installed)
+- [x] Dockerised anvil node (fallback when Foundry is not installed)
 - [ ] Testcontainers for facilitator + anvil for deterministic testing env
 
 ## Issues
