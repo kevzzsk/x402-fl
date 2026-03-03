@@ -30,6 +30,7 @@ export function register(program: Command) {
       defaults.anvilPort,
     )
     .option("--rpc-url <url>", `Base mainnet RPC URL to fork (default: ${defaults.rpcUrl})`)
+    .option("--anvil-host <host>", "Anvil listen host (default: 127.0.0.1)")
     .option("--private-key <key>", "facilitator private key (default: Anvil account 0)", parsePrivateKey)
     .option("-v, --verbose", "verbose output (-v facilitator logs, -vv anvil logs)", (_: string, prev: number) => prev + 1, 0)
     .addHelpText(
@@ -45,6 +46,7 @@ Examples:
       await devCommand({
         port: opts.port,
         anvilPort: opts.anvilPort,
+        anvilHost: opts.anvilHost,
         rpcUrl,
         privateKey: opts.privateKey,
         portExplicit: command.getOptionValueSource("port") !== "default",
@@ -58,6 +60,7 @@ Examples:
 export interface DevOptions {
   port: number;
   anvilPort: number;
+  anvilHost?: string;
   rpcUrl: string;
   privateKey?: `0x${string}`;
   portExplicit: boolean;
@@ -115,6 +118,7 @@ export async function devCommand(options: DevOptions): Promise<void> {
     forkUrl: options.rpcUrl,
     port: anvilPort,
     chainId,
+    host: options.anvilHost,
   });
 
   anvilProc.on("exit", (code) => {

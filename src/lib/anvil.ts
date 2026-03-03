@@ -15,6 +15,7 @@ export interface AnvilOptions {
   forkUrl: string;
   port: number;
   chainId: number;
+  host?: string;
 }
 
 export function isFoundryInstalled(): boolean {
@@ -86,6 +87,8 @@ function startNativeAnvil(options: AnvilOptions): ChildProcess {
     String(options.chainId),
     "--port",
     String(options.port),
+    "--host",
+    options.host ?? "127.0.0.1",
   ];
 
   const proc = spawn("anvil", args, {

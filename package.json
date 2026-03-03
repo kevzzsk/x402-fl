@@ -6,12 +6,20 @@
   "bin": {
     "x402-fl": "dist/cli.js"
   },
+  "exports": {
+    "./testcontainers": {
+      "import": "./dist/testcontainers.js",
+      "types": "./dist/testcontainers.d.ts"
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsdown",
-    "dev": "tsx src/cli.ts dev"
+    "dev": "tsx src/cli.ts dev",
+    "pretest": "pnpm build",
+    "test": "vitest run"
   },
   "repository": {
     "type": "git",
@@ -42,9 +50,19 @@
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
+    "testcontainers": "^11.12.0",
     "tsdown": "0.21.0-beta.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
+  },
+  "peerDependencies": {
+    "testcontainers": "^11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "testcontainers": {
+      "optional": true
+    }
   },
   "packageManager": "pnpm@10.28.2",
   "engines": {

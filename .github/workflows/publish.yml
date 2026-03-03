@@ -11,23 +11,17 @@ concurrency:
 permissions:
   contents: read
   id-token: write
+  packages: write
+  attestations: write
 
 jobs:
-  publish:
-    name: Publish [npm]
+  validate-tag:
+    name: Validate tag
     runs-on: ubuntu-latest
-    environment: NPM
+    outputs:
+      version: ${{ steps.info.outputs.version }}
+      dist_tag: ${{ steps.info.outputs.dist_tag }}
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          registry-url: https://registry.npmjs.org
-          cache: pnpm
-
       - name: Extract and validate version from tag
         id: info
         run: |
@@ -49,6 +43,22 @@ jobs:
             echo "dist_tag=latest" >> $GITHUB_OUTPUT
           fi
 
+  publish-npm:
+    name: Publish [npm]
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    environment: NPM
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -57,8 +67,55 @@ jobs:
 
       - name: Set version
         run: |
-          VERSION="${{ steps.info.outputs.version }}"
+          VERSION="${{ needs.validate-tag.outputs.version }}"
           sed -i 's/"version": "0.0.0"/"version": "'"$VERSION"'"/g' package.json
 
       - name: Publish
-        run: npm publish --access public --tag ${{ steps.info.outputs.dist_tag }}
+        run: npm publish --access public --tag ${{ needs.validate-tag.outputs.dist_tag }}
+
+  publish-ghcr:
+    name: Publish [ghcr]
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate-tag.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate-tag.outputs.dist_tag }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
