@@ -3,7 +3,7 @@ import boxen from "boxen";
 import type { Command } from "commander";
 import type { ChildProcess } from "child_process";
 import type { Server } from "http";
-import { startAnvil, waitForAnvil } from "../lib/anvil.js";
+import { startAnvil, waitForAnvil, isFoundryInstalled } from "../lib/anvil.js";
 import { startFacilitator } from "../lib/facilitator.js";
 import { fetchChainId } from "../lib/chain.js";
 import { defaults, networkId, USDC_ADDRESS } from "../lib/config.js";
@@ -126,7 +126,8 @@ export async function devCommand(options: DevOptions): Promise<void> {
 
   // 2. Wait for Anvil to be ready
   console.log(chalk.dim("Waiting for Anvil to be ready..."));
-  await waitForAnvil(localRpcUrl);
+  const anvilTimeout = isFoundryInstalled() ? 30_000 : 120_000;
+  await waitForAnvil(localRpcUrl, anvilTimeout);
   console.log(chalk.dim("Anvil is ready."));
 
   // 3. Start facilitator
