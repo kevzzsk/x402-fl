@@ -4,9 +4,11 @@ RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 
+# Foundry v1.5.1 – separate stage for proper platform resolution
+FROM ghcr.io/foundry-rs/foundry@sha256:3a70bfa9bd2c732a767bb60d12c8770b40e8f9b6cca28efc4b12b1be81c7f28e AS foundry
+
 FROM node:24-slim
-# Install Anvil from Foundry:v1.5.1
-COPY --from=ghcr.io/foundry-rs/foundry@sha256:3a70bfa9bd2c732a767bb60d12c8770b40e8f9b6cca28efc4b12b1be81c7f28e /usr/local/bin/anvil /usr/local/bin/anvil
+COPY --from=foundry /usr/local/bin/anvil /usr/local/bin/anvil
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
