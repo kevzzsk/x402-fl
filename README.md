@@ -184,7 +184,7 @@ Any address can be funded using `x402-fl fund`.
 - [ ] Custom ERC-20 token support
 - [ ] Custom Fork url
 - [ ] Custom Fork block height
-- [x] Dockerised anvil node (fallback when foundry is not installed)
+- [x] Dockerised anvil node (fallback when Foundry is not installed)
 - [ ] Testcontainers for facilitator + anvil for deterministic testing env
 
 ## Issues

@@ -116,7 +116,7 @@ function startDockerAnvil(options: AnvilOptions): ChildProcess {
     `${options.port}:8545`,
     "--entrypoint",
     "anvil",
-    "ghcr.io/foundry-rs/foundry",
+    "ghcr.io/foundry-rs/foundry:v1.5.0",
     "--host",
     "0.0.0.0",
     "--fork-url",
