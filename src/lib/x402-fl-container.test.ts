@@ -16,12 +16,15 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { createLocalChain } from "./chain.js";
+import { GenericContainer } from "testcontainers";
 
 describe("X402FacilitatorLocalContainer", () => {
   let container: StartedX402FacilitatorLocalContainer;
 
   beforeAll(async () => {
-    container = await new X402FacilitatorLocalContainer().start();
+    const imageTag = `x402-fl-local:${Date.now()}`;
+    await GenericContainer.fromDockerfile(".").build(imageTag);
+    container = await new X402FacilitatorLocalContainer(imageTag).start();
   });
 
   afterAll(async () => {
