@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import {
   GenericContainer,
   type StartedTestContainer,
@@ -9,7 +11,7 @@ import { fundAddress, type FundResult } from "./fund.js";
 const ANVIL_PORT = 8545;
 const FACILITATOR_PORT = 4022;
 
-const packageRoot = new URL("../../", import.meta.url).pathname;
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../");
 
 const buildCache = new Map<string, Promise<void>>();
 

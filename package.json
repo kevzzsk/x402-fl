@@ -14,11 +14,13 @@
   },
   "files": [
     "dist",
-    "Dockerfile"
+    "Dockerfile",
+    "pnpm-lock.yaml"
   ],
   "scripts": {
     "build": "tsdown",
     "dev": "tsx src/cli.ts dev",
+    "pretest": "pnpm build",
     "test": "vitest run"
   },
   "repository": {

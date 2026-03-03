@@ -27,7 +27,7 @@ That's it. Behind the scenes, `x402-fl`:
 - [pnpm](https://pnpm.io/)
 - One of:
   - [Foundry](https://www.getfoundry.sh/introduction/installation) (recommended, provides `anvil`)
-  - [Docker](https://docs.docker.com/get-docker/) (fallback, runs Anvil in a container)
+  - [Docker](https://docs.docker.com/get-docker/) (fallback, runs Anvil in a container; also required for [Testcontainers](#testcontainers))
 
 ## Quick Start
 
@@ -169,6 +169,71 @@ Health check endpoint.
 }
 ```
 
+## Testcontainers
+
+`x402-fl` ships a [Testcontainers](https://node.testcontainers.org/) module so you can spin up a fully isolated x402 environment in integration tests. The container bundles Anvil + the facilitator server and builds the Docker image automatically on first use.
+
+### Install
+
+The `testcontainers` package is an optional peer dependency:
+
+```bash
+pn install -D testcontainers
+```
+
+### Usage
+
+```ts
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import {
+  X402FacilitatorLocalContainer,
+  type StartedX402FacilitatorLocalContainer,
+  accounts,
+} from "x402-fl/testcontainers";
+
+describe("x402 integration", () => {
+  let container: StartedX402FacilitatorLocalContainer;
+
+  beforeAll(async () => {
+    container = await new X402FacilitatorLocalContainer().start();
+  });
+
+  afterAll(async () => {
+    await container?.stop();
+  });
+
+  it("facilitator is healthy", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/health`);
+    expect(res.status).toBe(200);
+  });
+
+  it("funds an address with USDC", async () => {
+    await container.fund(accounts.facilitator.address, "100");
+  });
+});
+```
+
+### API
+
+#### `X402FacilitatorLocalContainer`
+
+| Method | Description |
+| --- | --- |
+| `new X402FacilitatorLocalContainer(image?)` | Create a container (default image: `x402-fl:local`) |
+| `.withForkUrl(url)` | Set a custom Base RPC URL to fork (chainable) |
+| `.start()` | Build the image (if needed) and start the container |
+
+#### `StartedX402FacilitatorLocalContainer`
+
+| Method | Description |
+| --- | --- |
+| `.getRpcUrl()` | Anvil RPC endpoint (`http://host:port`) |
+| `.getFacilitatorUrl()` | Facilitator HTTP endpoint (`http://host:port`) |
+| `.fund(address, amount)` | Mint USDC to an address (amount in human-readable units) |
+| `.stop()` | Stop and remove the container |
+
+> **Note**: The first call to `.start()` builds the Docker image from the package's Dockerfile, which may take a minute. Subsequent calls in the same process reuse the cached image.
+
 ## Test Accounts
 
 The facilitator uses Anvil's default deterministic account (index 0). **Do not use these keys for anything real.**
@@ -185,7 +250,7 @@ Any address can be funded using `x402-fl fund`.
 - [ ] Custom Fork url
 - [ ] Custom Fork block height
 - [x] Dockerised anvil node (fallback when Foundry is not installed)
-- [ ] Testcontainers for facilitator + anvil for deterministic testing env
+- [x] Testcontainers for facilitator + anvil for deterministic testing env
 
 ## Issues
 

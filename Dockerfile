@@ -5,7 +5,8 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 
 FROM node:24-slim
-COPY --from=ghcr.io/foundry-rs/foundry:v1.5.0 /usr/local/bin/anvil /usr/local/bin/anvil
+# Install Anvil from Foundry:v1.5.1
+COPY --from=ghcr.io/foundry-rs/foundry@sha256:3a70bfa9bd2c732a767bb60d12c8770b40e8f9b6cca28efc4b12b1be81c7f28e /usr/local/bin/anvil /usr/local/bin/anvil
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
