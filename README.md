@@ -251,6 +251,7 @@ Any address can be funded using `x402-fl fund`.
 - [ ] Custom Fork block height
 - [x] Dockerised anvil node (fallback when Foundry is not installed)
 - [x] Testcontainers for facilitator + anvil for deterministic testing env
+- [ ] Support all anvil args and passdown the args
 
 ## Issues
 
