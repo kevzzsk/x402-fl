@@ -178,7 +178,7 @@ Health check endpoint.
 The `testcontainers` package is an optional peer dependency:
 
 ```bash
-pn install -D testcontainers
+pnpm install -D testcontainers
 ```
 
 ### Usage
@@ -217,20 +217,20 @@ describe("x402 integration", () => {
 
 #### `X402FacilitatorLocalContainer`
 
-| Method | Description |
-| --- | --- |
+| Method                                      | Description                                         |
+| ------------------------------------------- | --------------------------------------------------- |
 | `new X402FacilitatorLocalContainer(image?)` | Create a container (default image: `x402-fl:local`) |
-| `.withForkUrl(url)` | Set a custom Base RPC URL to fork (chainable) |
-| `.start()` | Build the image (if needed) and start the container |
+| `.withForkUrl(url)`                         | Set a custom Base RPC URL to fork (chainable)       |
+| `.start()`                                  | Build the image (if needed) and start the container |
 
 #### `StartedX402FacilitatorLocalContainer`
 
-| Method | Description |
-| --- | --- |
-| `.getRpcUrl()` | Anvil RPC endpoint (`http://host:port`) |
-| `.getFacilitatorUrl()` | Facilitator HTTP endpoint (`http://host:port`) |
+| Method                   | Description                                              |
+| ------------------------ | -------------------------------------------------------- |
+| `.getRpcUrl()`           | Anvil RPC endpoint (`http://host:port`)                  |
+| `.getFacilitatorUrl()`   | Facilitator HTTP endpoint (`http://host:port`)           |
 | `.fund(address, amount)` | Mint USDC to an address (amount in human-readable units) |
-| `.stop()` | Stop and remove the container |
+| `.stop()`                | Stop and remove the container                            |
 
 > **Note**: The first call to `.start()` builds the Docker image from the package's Dockerfile, which may take a minute. Subsequent calls in the same process reuse the cached image.
 

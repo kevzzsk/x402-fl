@@ -43,19 +43,19 @@ export async function fundCommand(options: FundOptions): Promise<void> {
   const { address, amount, anvilPort } = options;
   const rpcUrl = `http://localhost:${anvilPort}`;
 
-  let result;
+  let result: Awaited<ReturnType<typeof fundAddress>>;
   try {
     result = await fundAddress(rpcUrl, address, amount);
   } catch (err) {
     if (
       err instanceof Error &&
       (err.message.includes("fetch failed") ||
-       err.message.includes("ECONNREFUSED") ||
-       err.message.includes("Could not connect"))
+        err.message.includes("ECONNREFUSED") ||
+        err.message.includes("Could not connect"))
     ) {
       console.error(
         `Error: Could not connect to Anvil at ${rpcUrl}.\n` +
-          `Make sure Anvil is running (e.g. "x402-fl dev" or "anvil --fork-url ...").`
+          `Make sure Anvil is running (e.g. "x402-fl dev" or "anvil --fork-url ...").`,
       );
       process.exit(1);
     }
@@ -66,15 +66,22 @@ export async function fundCommand(options: FundOptions): Promise<void> {
 
   const formatAmount = (raw: bigint) => formatTokenAmount(raw, decimals);
 
-  console.log(boxen(
-    [
-      `${chalk.dim("Token")}    ${result.token}`,
-      `${chalk.dim("Address")}  ${result.address}`,
-      "",
-      `${chalk.dim("Before")}   ${formatAmount(result.before)} USDC`,
-      `${chalk.dim("Added")}    ${chalk.yellow("+" + formatAmount(result.added))} USDC`,
-      `${chalk.dim("After")}    ${chalk.green.bold(formatAmount(result.after))} USDC`,
-    ].join("\n"),
-    { title: "Funded", padding: 1, borderStyle: "round", borderColor: "green" },
-  ));
+  console.log(
+    boxen(
+      [
+        `${chalk.dim("Token")}    ${result.token}`,
+        `${chalk.dim("Address")}  ${result.address}`,
+        "",
+        `${chalk.dim("Before")}   ${formatAmount(result.before)} USDC`,
+        `${chalk.dim("Added")}    ${chalk.yellow("+" + formatAmount(result.added))} USDC`,
+        `${chalk.dim("After")}    ${chalk.green.bold(formatAmount(result.after))} USDC`,
+      ].join("\n"),
+      {
+        title: "Funded",
+        padding: 1,
+        borderStyle: "round",
+        borderColor: "green",
+      },
+    ),
+  );
 }
