@@ -10,8 +10,14 @@ Before using x402-fl, verify these are available:
 # Node.js 24+
 node --version
 
-# Foundry's Anvil
+# pnpm
+pnpm --version
+
+# Foundry's Anvil (recommended)
 anvil --version
+
+# OR Docker (fallback when Foundry is not installed; also required for Testcontainers)
+docker --version
 ```
 
 If `anvil` is not found, install Foundry: https://www.getfoundry.sh/introduction/installation
@@ -114,6 +120,100 @@ curl http://localhost:4022/supported
 
 Returns the payment schemes and networks the facilitator supports.
 
+### Run via Docker
+
+A pre-built Docker image is available:
+
+```bash
+docker run -p 4022:4022 -p 8545:8545 ghcr.io/kevzzsk/x402-fl:latest
+```
+
+Override the fork RPC URL:
+
+```bash
+docker run -p 4022:4022 -p 8545:8545 ghcr.io/kevzzsk/x402-fl:latest --rpc-url https://your-rpc-url.com
+```
+
+| Tag      | Description                                            |
+| -------- | ------------------------------------------------------ |
+| `latest` | Latest stable release                                  |
+| `next`   | Pre-release builds (e.g. `1.0.0-beta.1`)              |
+| `x.y.z`  | Pinned version (e.g. `ghcr.io/kevzzsk/x402-fl:0.1.0`) |
+
+### Testcontainers (integration tests)
+
+Spin up a fully isolated x402 environment in integration tests. Requires Docker and the `testcontainers` peer dependency:
+
+```bash
+pnpm install -D testcontainers
+```
+
+Usage:
+
+```ts
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import {
+  X402FacilitatorLocalContainer,
+  type StartedX402FacilitatorLocalContainer,
+  accounts,
+} from "x402-fl/testcontainers";
+
+describe("x402 integration", () => {
+  let container: StartedX402FacilitatorLocalContainer;
+
+  beforeAll(async () => {
+    container = await new X402FacilitatorLocalContainer().start();
+  });
+
+  afterAll(async () => {
+    await container?.stop();
+  });
+
+  it("facilitator is healthy", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/health`);
+    expect(res.status).toBe(200);
+  });
+
+  it("funds an address with USDC", async () => {
+    await container.fund(accounts.facilitator.address, "100");
+  });
+
+  it("checks balance", async () => {
+    const result = await container.balance(accounts.facilitator.address);
+    console.log(result.formatted); // e.g. "100"
+  });
+});
+```
+
+#### `X402FacilitatorLocalContainer`
+
+| Method                                      | Description                                                    |
+| ------------------------------------------- | -------------------------------------------------------------- |
+| `new X402FacilitatorLocalContainer(image?)` | Create a container (default: `ghcr.io/kevzzsk/x402-fl:latest`) |
+| `.withForkUrl(url)`                         | Set a custom Base RPC URL to fork (chainable)                  |
+| `.start()`                                  | Start the container                                            |
+
+#### `StartedX402FacilitatorLocalContainer`
+
+| Method                   | Description                                              |
+| ------------------------ | -------------------------------------------------------- |
+| `.getRpcUrl()`           | Anvil RPC endpoint (`http://host:port`)                  |
+| `.getFacilitatorUrl()`   | Facilitator HTTP endpoint (`http://host:port`)           |
+| `.fund(address, amount)` | Mint USDC to an address (amount in human-readable units) |
+| `.balance(address)`      | Get USDC balance (returns `{ value, formatted, decimals }`) |
+| `.getPublicClient()`     | Get a viem `PublicClient` connected to the Anvil fork    |
+| `.stop()`                | Stop and remove the container                            |
+
+#### Exports from `x402-fl/testcontainers`
+
+| Export                | Description                          |
+| --------------------- | ------------------------------------ |
+| `accounts`            | Pre-configured Anvil test accounts   |
+| `USDC_ADDRESS`        | Base mainnet USDC contract address   |
+| `fundAddress`         | Direct fund function (without container) |
+| `createPublicClient`  | Create a viem public client          |
+| `fetchChainId`        | Fetch chain ID from an RPC URL       |
+
 ## Reference
 
 | Item | Value |
@@ -143,6 +243,7 @@ Any Anvil account (indices 0-9) can be used for testing. Fund any address using 
 | `--port <number>` | `4022` | Facilitator HTTP port |
 | `--anvil-port <number>` | `8545` | Anvil RPC port |
 | `--rpc-url <url>` | `https://mainnet.base.org` | Base RPC URL to fork |
+| `--private-key <key>` | Anvil account 0 | Custom facilitator private key (not recommended) |
 | `-v` | | Show facilitator request logs |
 | `-vv` | | Show facilitator + Anvil logs |
 
@@ -150,6 +251,7 @@ Any Anvil account (indices 0-9) can be used for testing. Fund any address using 
 
 **`anvil: command not found`**
 Install Foundry: `curl -L https://foundry.paradigm.xyz | bash && foundryup`
+Or use Docker as a fallback -- x402-fl will automatically use a containerized Anvil if Foundry is not installed.
 
 **`Error: Could not connect to Anvil at http://localhost:8545`**
 The Anvil instance is not running. Start the environment first with `npx x402-fl dev`.

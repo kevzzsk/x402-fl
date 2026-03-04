@@ -189,10 +189,10 @@ Override the fork RPC URL:
 docker run -p 4022:4022 -p 8545:8545 ghcr.io/kevzzsk/x402-fl:latest --rpc-url https://your-rpc-url.com
 ```
 
-| Tag      | Description                                      |
-| -------- | ------------------------------------------------ |
-| `latest` | Latest stable release                            |
-| `next`   | Pre-release builds (e.g. `1.0.0-beta.1`)        |
+| Tag      | Description                                           |
+| -------- | ----------------------------------------------------- |
+| `latest` | Latest stable release                                 |
+| `next`   | Pre-release builds (e.g. `1.0.0-beta.1`)              |
 | `x.y.z`  | Pinned version (e.g. `ghcr.io/kevzzsk/x402-fl:0.1.0`) |
 
 ## Testcontainers
@@ -243,11 +243,11 @@ describe("x402 integration", () => {
 
 #### `X402FacilitatorLocalContainer`
 
-| Method                                      | Description                                         |
-| ------------------------------------------- | --------------------------------------------------- |
+| Method                                      | Description                                                    |
+| ------------------------------------------- | -------------------------------------------------------------- |
 | `new X402FacilitatorLocalContainer(image?)` | Create a container (default: `ghcr.io/kevzzsk/x402-fl:latest`) |
-| `.withForkUrl(url)`                         | Set a custom Base RPC URL to fork (chainable)       |
-| `.start()`                                  | Build the image (if needed) and start the container |
+| `.withForkUrl(url)`                         | Set a custom Base RPC URL to fork (chainable)                  |
+| `.start()`                                  | Build the image (if needed) and start the container            |
 
 #### `StartedX402FacilitatorLocalContainer`
 
@@ -272,12 +272,13 @@ Any address can be funded using `x402-fl fund`.
 
 ## Roadmap
 
-- [ ] Custom ERC-20 token support
+- [ ] Custom Asset support (EIP-3009 tokens)
 - [ ] Custom Fork url
 - [ ] Custom Fork block height
 - [x] Dockerised anvil node (fallback when Foundry is not installed)
 - [x] Testcontainers for facilitator + anvil for deterministic testing env
 - [ ] Support all anvil args and passdown the args
+- [ ] Support SVM
 
 ## Issues
 
