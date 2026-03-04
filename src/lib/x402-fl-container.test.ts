@@ -83,7 +83,7 @@ describe("X402FacilitatorLocalContainer", () => {
     }).extend(publicActions);
 
     const balanceBefore = await client.getBalance({ address: recipient });
-    expect(balanceBefore).toBe(0n);
+    expect(balanceBefore).toStrictEqual(0n);
 
     const hash = await client.sendTransaction({
       to: recipient,
@@ -91,15 +91,43 @@ describe("X402FacilitatorLocalContainer", () => {
     });
 
     const receipt = await client.waitForTransactionReceipt({ hash });
-    expect(receipt.status).toBe("success");
+    expect(receipt.status).toStrictEqual("success");
 
     const balanceAfter = await client.getBalance({ address: recipient });
-    expect(balanceAfter).toBe(parseEther("1"));
+    expect(balanceAfter).toStrictEqual(parseEther("1"));
+  });
+
+  it("balance() returns the USDC balance for an address", async () => {
+    const address = accounts.facilitator.address;
+    await container.fund(address, "50");
+
+    const result = await container.balance(address);
+
+    expect(result.value).toBeGreaterThanOrEqual(50_000_000n);
+    expect(result.formatted).toBeDefined();
+    expect(result.decimals).toStrictEqual(6);
+  });
+
+  it("info() returns container configuration", async () => {
+    const info = await container.info();
+
+    expect(info.usdcAddress).toStrictEqual(USDC_ADDRESS);
+    expect(info.chainId).toStrictEqual(8453);
+    expect(info.facilitatorAddress).toStrictEqual(accounts.facilitator.address);
+    expect(info.rpcUrl).toContain("http://");
+    expect(info.facilitatorUrl).toContain("http://");
+    expect(info.decimals).toStrictEqual(6);
+  });
+
+  it("getPublicClient() returns a working viem client", async () => {
+    const client = await container.getPublicClient();
+    const chainId = await client.getChainId();
+    expect(chainId).toStrictEqual(8453);
   });
 
   it("withForkUrl is chainable", () => {
     const instance = new X402FacilitatorLocalContainer();
     const returned = instance.withForkUrl("http://localhost:8545");
-    expect(returned).toBe(instance);
+    expect(returned).toStrictEqual(instance);
   });
 });
