@@ -108,17 +108,6 @@ describe("X402FacilitatorLocalContainer", () => {
     expect(result.decimals).toStrictEqual(6);
   });
 
-  it("info() returns container configuration", async () => {
-    const info = await container.info();
-
-    expect(info.usdcAddress).toStrictEqual(USDC_ADDRESS);
-    expect(info.chainId).toStrictEqual(8453);
-    expect(info.facilitatorAddress).toStrictEqual(accounts.facilitator.address);
-    expect(info.rpcUrl).toContain("http://");
-    expect(info.facilitatorUrl).toContain("http://");
-    expect(info.decimals).toStrictEqual(6);
-  });
-
   it("getPublicClient() returns a working viem client", async () => {
     const client = await container.getPublicClient();
     const chainId = await client.getChainId();

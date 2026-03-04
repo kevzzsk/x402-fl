@@ -8,20 +8,11 @@ import type { PublicClient } from "viem";
 import { fundAddress, type FundResult } from "./fund.js";
 import { fetchChainId, createPublicClient } from "./chain.js";
 import { ERC20_ABI } from "./abi.js";
-import { USDC_ADDRESS, DEFAULT_DECIMALS, formatTokenAmount, accounts } from "./config.js";
+import { USDC_ADDRESS, formatTokenAmount } from "./config.js";
 
 export interface BalanceResult {
   value: bigint;
   formatted: string;
-  decimals: number;
-}
-
-export interface ContainerInfo {
-  usdcAddress: `0x${string}`;
-  chainId: number;
-  facilitatorAddress: `0x${string}`;
-  rpcUrl: string;
-  facilitatorUrl: string;
   decimals: number;
 }
 
@@ -96,19 +87,6 @@ export class StartedX402FacilitatorLocalContainer extends AbstractStartedContain
       value,
       formatted: formatTokenAmount(value, decimals),
       decimals,
-    };
-  }
-
-  async info(): Promise<ContainerInfo> {
-    const rpcUrl = this.getRpcUrl();
-    const chainId = await fetchChainId(rpcUrl);
-    return {
-      usdcAddress: USDC_ADDRESS,
-      chainId,
-      facilitatorAddress: accounts.facilitator.address,
-      rpcUrl,
-      facilitatorUrl: this.getFacilitatorUrl(),
-      decimals: DEFAULT_DECIMALS,
     };
   }
 }
