@@ -45,6 +45,8 @@ export class X402FacilitatorLocalContainer extends GenericContainer {
 }
 
 export class StartedX402FacilitatorLocalContainer extends AbstractStartedContainer {
+  private cachedClient: Promise<PublicClient> | undefined;
+
   constructor(startedTestContainer: StartedTestContainer) {
     super(startedTestContainer);
   }
@@ -61,10 +63,14 @@ export class StartedX402FacilitatorLocalContainer extends AbstractStartedContain
     return fundAddress(this.getRpcUrl(), address, amount);
   }
 
-  async getPublicClient(): Promise<PublicClient> {
-    const rpcUrl = this.getRpcUrl();
-    const chainId = await fetchChainId(rpcUrl);
-    return createPublicClient(rpcUrl, chainId);
+  getPublicClient(): Promise<PublicClient> {
+    if (!this.cachedClient) {
+      const rpcUrl = this.getRpcUrl();
+      this.cachedClient = fetchChainId(rpcUrl).then((chainId) =>
+        createPublicClient(rpcUrl, chainId),
+      );
+    }
+    return this.cachedClient;
   }
 
   async balance(address: `0x${string}`): Promise<BalanceResult> {
