@@ -4,7 +4,17 @@ import {
   AbstractStartedContainer,
   Wait,
 } from "testcontainers";
+import type { PublicClient } from "viem";
 import { fundAddress, type FundResult } from "./fund.js";
+import { fetchChainId, createPublicClient } from "./chain.js";
+import { ERC20_ABI } from "./abi.js";
+import { USDC_ADDRESS, formatTokenAmount } from "./config.js";
+
+export interface BalanceResult {
+  value: bigint;
+  formatted: string;
+  decimals: number;
+}
 
 const ANVIL_PORT = 8545;
 const FACILITATOR_PORT = 4022;
@@ -35,6 +45,8 @@ export class X402FacilitatorLocalContainer extends GenericContainer {
 }
 
 export class StartedX402FacilitatorLocalContainer extends AbstractStartedContainer {
+  private cachedClient: Promise<PublicClient> | undefined;
+
   constructor(startedTestContainer: StartedTestContainer) {
     super(startedTestContainer);
   }
@@ -49,5 +61,38 @@ export class StartedX402FacilitatorLocalContainer extends AbstractStartedContain
 
   async fund(address: `0x${string}`, amount: string): Promise<FundResult> {
     return fundAddress(this.getRpcUrl(), address, amount);
+  }
+
+  getPublicClient(): Promise<PublicClient> {
+    if (!this.cachedClient) {
+      const rpcUrl = this.getRpcUrl();
+      this.cachedClient = fetchChainId(rpcUrl).then((chainId) =>
+        createPublicClient(rpcUrl, chainId),
+      );
+    }
+    return this.cachedClient;
+  }
+
+  async balance(address: `0x${string}`): Promise<BalanceResult> {
+    const client = await this.getPublicClient();
+
+    const decimals = await client.readContract({
+      address: USDC_ADDRESS,
+      abi: ERC20_ABI,
+      functionName: "decimals",
+    });
+
+    const value = await client.readContract({
+      address: USDC_ADDRESS,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    });
+
+    return {
+      value,
+      formatted: formatTokenAmount(value, decimals),
+      decimals,
+    };
   }
 }
