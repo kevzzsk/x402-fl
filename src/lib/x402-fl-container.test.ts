@@ -8,22 +8,21 @@ import {
   USDC_ADDRESS,
 } from "../testcontainers.js";
 import { ERC20_ABI } from "./abi.js";
-import {
-  createWalletClient,
-  http,
-  parseEther,
-  publicActions,
-} from "viem";
+import { createWalletClient, http, parseEther, publicActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { createLocalChain } from "./chain.js";
 import { GenericContainer } from "testcontainers";
+
+const imageTag = `x402-fl-local:${Date.now()}`;
+
+beforeAll(async () => {
+  await GenericContainer.fromDockerfile(".").build(imageTag);
+}, 120_000);
 
 describe("X402FacilitatorLocalContainer", () => {
   let container: StartedX402FacilitatorLocalContainer;
 
   beforeAll(async () => {
-    const imageTag = `x402-fl-local:${Date.now()}`;
-    await GenericContainer.fromDockerfile(".").build(imageTag);
     container = await new X402FacilitatorLocalContainer(imageTag).start();
   });
 
@@ -73,7 +72,8 @@ describe("X402FacilitatorLocalContainer", () => {
 
     const account = privateKeyToAccount(accounts.facilitator.privateKey);
     // Use a fresh address with no pre-seeded Anvil balance
-    const recipient = "0x000000000000000000000000000000000000bEEF" as `0x${string}`;
+    const recipient =
+      "0x000000000000000000000000000000000000bEEF" as `0x${string}`;
 
     const client = createWalletClient({
       account,
@@ -114,9 +114,64 @@ describe("X402FacilitatorLocalContainer", () => {
     expect(chainId).toStrictEqual(8453);
   });
 
-  it("withForkUrl is chainable", () => {
+  it("all builder methods are chainable", () => {
     const instance = new X402FacilitatorLocalContainer();
-    const returned = instance.withForkUrl("http://localhost:8545");
+    const returned = instance
+      .withForkUrl("http://localhost:8545")
+      .withPort(9000)
+      .withAnvilPort(9545)
+      .withPrivateKey(
+        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+      )
+      .withVerbose(1);
     expect(returned).toStrictEqual(instance);
+  });
+});
+
+describe("X402FacilitatorLocalContainer with custom options", () => {
+  // Anvil account 1
+  const CUSTOM_PRIVATE_KEY =
+    "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+  const expectedAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+  const CUSTOM_FACILITATOR_PORT = 5000;
+  const CUSTOM_ANVIL_PORT = 9545;
+
+  let customContainer: StartedX402FacilitatorLocalContainer;
+
+  beforeAll(async () => {
+    customContainer = await new X402FacilitatorLocalContainer(imageTag)
+      .withPort(CUSTOM_FACILITATOR_PORT)
+      .withAnvilPort(CUSTOM_ANVIL_PORT)
+      .withPrivateKey(CUSTOM_PRIVATE_KEY)
+      .withVerbose(1)
+      .start();
+  });
+
+  afterAll(async () => {
+    await customContainer?.stop();
+  });
+
+  it("withPort() sets the custom facilitator port", async () => {
+    const facilitatorUrl = customContainer.getFacilitatorUrl();
+    expect(facilitatorUrl).toContain(`:${CUSTOM_FACILITATOR_PORT}`);
+
+    const res = await fetch(`${customContainer.getFacilitatorUrl()}/health`);
+    expect(res.status).toStrictEqual(200);
+  });
+
+  it("withAnvilPort() sets the custom anvil port", async () => {
+    const rpcUrl = customContainer.getRpcUrl();
+    expect(rpcUrl).toContain(`:${CUSTOM_ANVIL_PORT}`);
+
+    const chainId = await fetchChainId(customContainer.getRpcUrl());
+    expect(chainId).toStrictEqual(8453);
+  });
+
+  it("withPrivateKey() sets the custom facilitator address", async () => {
+    const res = await fetch(`${customContainer.getFacilitatorUrl()}/health`);
+    const body = await res.json();
+    expect(body.facilitator.toLowerCase()).toStrictEqual(
+      expectedAddress.toLowerCase(),
+    );
   });
 });
