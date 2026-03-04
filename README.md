@@ -169,9 +169,35 @@ Health check endpoint.
 }
 ```
 
+## Docker
+
+A pre-built Docker image is available on GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/kevzzsk/x402-fl:latest
+```
+
+Run it directly:
+
+```bash
+docker run -p 4022:4022 -p 8545:8545 ghcr.io/kevzzsk/x402-fl:latest
+```
+
+Override the fork RPC URL:
+
+```bash
+docker run -p 4022:4022 -p 8545:8545 ghcr.io/kevzzsk/x402-fl:latest --rpc-url https://your-rpc-url.com
+```
+
+| Tag      | Description                                      |
+| -------- | ------------------------------------------------ |
+| `latest` | Latest stable release                            |
+| `next`   | Pre-release builds (e.g. `1.0.0-beta.1`)        |
+| `x.y.z`  | Pinned version (e.g. `ghcr.io/kevzzsk/x402-fl:0.1.0`) |
+
 ## Testcontainers
 
-`x402-fl` ships a [Testcontainers](https://node.testcontainers.org/) module so you can spin up a fully isolated x402 environment in integration tests. The container bundles Anvil + the facilitator server and builds the Docker image automatically on first use.
+`x402-fl` ships a [Testcontainers](https://node.testcontainers.org/) module so you can spin up a fully isolated x402 environment in integration tests. The container pulls the [GHCR image](#docker) by default.
 
 ### Install
 
@@ -219,7 +245,7 @@ describe("x402 integration", () => {
 
 | Method                                      | Description                                         |
 | ------------------------------------------- | --------------------------------------------------- |
-| `new X402FacilitatorLocalContainer(image?)` | Create a container (default image: `x402-fl:local`) |
+| `new X402FacilitatorLocalContainer(image?)` | Create a container (default: `ghcr.io/kevzzsk/x402-fl:latest`) |
 | `.withForkUrl(url)`                         | Set a custom Base RPC URL to fork (chainable)       |
 | `.start()`                                  | Build the image (if needed) and start the container |
 
@@ -232,7 +258,7 @@ describe("x402 integration", () => {
 | `.fund(address, amount)` | Mint USDC to an address (amount in human-readable units) |
 | `.stop()`                | Stop and remove the container                            |
 
-> **Note**: The first call to `.start()` builds the Docker image from the package's Dockerfile, which may take a minute. Subsequent calls in the same process reuse the cached image.
+> **Note**: The first call to `.start()` pulls the Docker image from GHCR, which may take a moment. Subsequent calls reuse the cached image. You can pass a custom image tag to the constructor if needed.
 
 ## Test Accounts
 
