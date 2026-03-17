@@ -45,7 +45,7 @@ export class X402FacilitatorLocalContainer extends GenericContainer {
     return this;
   }
 
-  /** Override the fork RPC URL directly. Takes precedence over withNetworkPreset(). */
+  /** Override the fork RPC URL directly. Calling this clears any prior withNetworkPreset(). */
   withForkUrl(url: string): this {
     this.forkUrl = url;
     this.networkName = undefined;
@@ -150,7 +150,7 @@ export class StartedX402FacilitatorLocalContainer extends AbstractStartedContain
 
   async balance(address: `0x${string}`): Promise<BalanceResult> {
     const client = await this.getPublicClient();
-    const chainId = await client.getChainId();
+    const chainId = client.chain!.id;
     const usdcAddress = getUsdcAddress(chainId);
 
     const decimals = await client.readContract({

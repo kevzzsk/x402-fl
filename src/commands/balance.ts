@@ -7,6 +7,7 @@ import {
   DEFAULT_DECIMALS,
   formatTokenAmount,
   getUsdcAddress,
+  NETWORKS,
 } from "../lib/config.js";
 import { parseAddress, parsePort } from "../lib/parsers.js";
 import { ERC20_ABI } from "../lib/abi.js";
@@ -61,8 +62,11 @@ export async function balanceCommand(options: BalanceOptions): Promise<void> {
   try {
     usdcAddress = getUsdcAddress(chainId);
   } catch {
+    const supported = Object.values(NETWORKS)
+      .map((n) => `${n.name} (${n.chainId})`)
+      .join(", ");
     console.error(
-      `Error: Unsupported chain ID ${chainId}. Supported networks: base (8453), base-sepolia (84532).`,
+      `Error: Unsupported chain ID ${chainId}. Supported networks: ${supported}.`,
     );
     process.exit(1);
   }
