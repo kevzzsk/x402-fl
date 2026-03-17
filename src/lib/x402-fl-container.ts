@@ -12,7 +12,7 @@ import {
   getUsdcAddress,
   formatTokenAmount,
   getNetwork,
-  NetworkName,
+  type NetworkName,
 } from "./config.js";
 
 export interface BalanceResult {
@@ -25,7 +25,7 @@ const DEFAULT_ANVIL_PORT = 8545;
 const DEFAULT_FACILITATOR_PORT = 4022;
 
 export class X402FacilitatorLocalContainer extends GenericContainer {
-  private networkName: string | undefined;
+  private networkName: NetworkName | undefined;
   private forkUrl: string | undefined;
   private facilitatorPort: number = DEFAULT_FACILITATOR_PORT;
   private anvilPort: number = DEFAULT_ANVIL_PORT;
@@ -37,7 +37,7 @@ export class X402FacilitatorLocalContainer extends GenericContainer {
     this.withStartupTimeout(120_000);
   }
 
-  /** Set the fork RPC URL (and defaults) from a named network preset. */
+  /** Select a named network preset (e.g. "base", "base-sepolia") for the container. */
   withNetworkPreset(name: NetworkName): this {
     getNetwork(name); // Validate the name eagerly
     this.networkName = name;

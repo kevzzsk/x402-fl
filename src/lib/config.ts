@@ -34,14 +34,14 @@ export const USDC_ADDRESS =
 export const USDC_BASE_SEPOLIA_ADDRESS =
   "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as `0x${string}`;
 
+export type NetworkName = "base" | "base-sepolia";
+
 export interface NetworkPreset {
-  name: string;
+  name: NetworkName;
   chainId: number;
   rpcUrl: string;
   usdcAddress: `0x${string}`;
 }
-
-export type NetworkName = "base" | "base-sepolia";
 
 export const NETWORKS: Record<NetworkName, NetworkPreset> = {
   base: {

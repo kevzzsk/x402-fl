@@ -57,7 +57,15 @@ export async function balanceCommand(options: BalanceOptions): Promise<void> {
     process.exit(1);
   }
 
-  const usdcAddress = getUsdcAddress(chainId);
+  let usdcAddress: `0x${string}`;
+  try {
+    usdcAddress = getUsdcAddress(chainId);
+  } catch {
+    console.error(
+      `Error: Unsupported chain ID ${chainId}. Supported networks: base (8453), base-sepolia (84532).`,
+    );
+    process.exit(1);
+  }
   const client = createPublicClient(rpcUrl, chainId);
 
   let decimals = DEFAULT_DECIMALS;

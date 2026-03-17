@@ -109,10 +109,13 @@ export async function devCommand(options: DevOptions): Promise<void> {
   process.on("SIGINT", cleanup);
   process.on("SIGTERM", cleanup);
 
-  // 0. Detect chain ID from fork RPC
+  // 0. Detect chain ID from fork RPC and validate USDC support
   console.log(chalk.dim(`Detecting chain ID from ${options.rpcUrl}...`));
   const chainId = await fetchChainId(options.rpcUrl);
   console.log(chalk.dim(`Detected chain ID: ${chainId}`));
+
+  // Validate early — before starting any background processes
+  getUsdcAddress(chainId);
 
   // 1. Start Anvil
   console.log(
