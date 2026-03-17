@@ -1,12 +1,12 @@
 import chalk from "chalk";
 import boxen from "boxen";
-import type { Command } from "commander";
+import { Option, type Command } from "commander";
 import type { ChildProcess } from "child_process";
 import type { Server } from "http";
 import { startAnvil, waitForAnvil, isFoundryInstalled } from "../lib/anvil.js";
 import { startFacilitator } from "../lib/facilitator.js";
 import { fetchChainId } from "../lib/chain.js";
-import { defaults, networkId, USDC_ADDRESS } from "../lib/config.js";
+import { defaults, networkId, getUsdcAddress, getNetwork, NETWORKS, DEFAULT_NETWORK } from "../lib/config.js";
 import { parsePort, parsePrivateKey } from "../lib/parsers.js";
 import { resolvePort } from "../lib/port.js";
 import { setVerbosity } from "../lib/log.js";
@@ -29,7 +29,12 @@ export function register(program: Command) {
       parsePort,
       defaults.anvilPort,
     )
-    .option("--rpc-url <url>", `Base mainnet RPC URL to fork (default: ${defaults.rpcUrl})`)
+    .addOption(
+      new Option("--network <name>", "network preset")
+        .choices(Object.keys(NETWORKS))
+        .default(DEFAULT_NETWORK),
+    )
+    .option("--rpc-url <url>", `RPC URL to fork (overrides the --network preset's default)`)
     .option("--anvil-host <host>", "Anvil listen host (default: 127.0.0.1)")
     .option("--private-key <key>", "facilitator private key (default: Anvil account 0)", parsePrivateKey)
     .option("-v, --verbose", "verbose output (-v facilitator logs, -vv anvil logs)", (_: string, prev: number) => prev + 1, 0)
@@ -38,10 +43,11 @@ export function register(program: Command) {
       `
 Examples:
   $ x402-fl dev
+  $ x402-fl dev --network base-sepolia
   $ x402-fl dev --rpc-url https://custom-rpc.example.com --port 5000`,
     )
     .action(async (opts, command) => {
-      const rpcUrl = opts.rpcUrl || defaults.rpcUrl;
+      const rpcUrl = opts.rpcUrl || getNetwork(opts.network).rpcUrl;
 
       await devCommand({
         port: opts.port,
@@ -103,10 +109,13 @@ export async function devCommand(options: DevOptions): Promise<void> {
   process.on("SIGINT", cleanup);
   process.on("SIGTERM", cleanup);
 
-  // 0. Detect chain ID from fork RPC
+  // 0. Detect chain ID from fork RPC and validate USDC support
   console.log(chalk.dim(`Detecting chain ID from ${options.rpcUrl}...`));
   const chainId = await fetchChainId(options.rpcUrl);
   console.log(chalk.dim(`Detected chain ID: ${chainId}`));
+
+  // Validate early — before starting any background processes
+  getUsdcAddress(chainId);
 
   // 1. Start Anvil
   console.log(
@@ -158,7 +167,7 @@ export async function devCommand(options: DevOptions): Promise<void> {
         chalk.dim("Accounts"),
         `  ${chalk.dim("Facilitator")}  ${facilitator.address}`,
         "",
-        `${chalk.dim("USDC")}          ${USDC_ADDRESS}`,
+        `${chalk.dim("USDC")}          ${getUsdcAddress(chainId)}`,
         "",
         `${chalk.dim("Fund account with:")}`,
         `$ ${chalk.white("x402-fl fund <address> <amount>")}`,

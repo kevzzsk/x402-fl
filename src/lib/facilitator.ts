@@ -20,7 +20,9 @@ export interface FacilitatorResult {
   address: `0x${string}`;
 }
 
-export function startFacilitator(options: FacilitatorOptions): Promise<FacilitatorResult> {
+export function startFacilitator(
+  options: FacilitatorOptions,
+): Promise<FacilitatorResult> {
   const privateKey = options.privateKey ?? accounts.facilitator.privateKey;
 
   const viemClient = createWalletClient(
@@ -50,7 +52,9 @@ export function startFacilitator(options: FacilitatorOptions): Promise<Facilitat
   app.use((req, res, next) => {
     const start = Date.now();
     res.on("finish", () => {
-      verboseLog1(`[facilitator] ${req.method} ${req.path} ${res.statusCode} (${Date.now() - start}ms)`);
+      verboseLog1(
+        `[facilitator] ${req.method} ${req.path} ${res.statusCode} (${Date.now() - start}ms)`,
+      );
     });
     next();
   });

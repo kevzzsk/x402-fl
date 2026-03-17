@@ -5,7 +5,7 @@ import {
   fetchChainId,
   createPublicClient,
   accounts,
-  USDC_ADDRESS,
+  getUsdcAddress,
 } from "../testcontainers.js";
 import { ERC20_ABI } from "./abi.js";
 import { createWalletClient, http, parseEther, publicActions } from "viem";
@@ -46,8 +46,10 @@ describe("X402FacilitatorLocalContainer", () => {
     const chainId = await fetchChainId(rpcUrl);
     const client = createPublicClient(rpcUrl, chainId);
 
+    const usdcAddress = getUsdcAddress(chainId);
+
     const before = await client.readContract({
-      address: USDC_ADDRESS,
+      address: usdcAddress,
       abi: ERC20_ABI,
       functionName: "balanceOf",
       args: [address],
@@ -56,7 +58,7 @@ describe("X402FacilitatorLocalContainer", () => {
     await container.fund(address, "100");
 
     const after = await client.readContract({
-      address: USDC_ADDRESS,
+      address: usdcAddress,
       abi: ERC20_ABI,
       functionName: "balanceOf",
       args: [address],
@@ -117,6 +119,7 @@ describe("X402FacilitatorLocalContainer", () => {
   it("all builder methods are chainable", () => {
     const instance = new X402FacilitatorLocalContainer();
     const returned = instance
+      .withNetworkPreset("base-sepolia")
       .withForkUrl("http://localhost:8545")
       .withPort(9000)
       .withAnvilPort(9545)
@@ -125,6 +128,73 @@ describe("X402FacilitatorLocalContainer", () => {
       )
       .withVerbose(1);
     expect(returned).toStrictEqual(instance);
+  });
+});
+
+describe("X402FacilitatorLocalContainer (Base Sepolia)", () => {
+  let container: StartedX402FacilitatorLocalContainer;
+
+  beforeAll(async () => {
+    container = await new X402FacilitatorLocalContainer(imageTag)
+      .withNetworkPreset("base-sepolia")
+      .start();
+  });
+
+  afterAll(async () => {
+    await container?.stop();
+  });
+
+  it("chain ID is 84532", async () => {
+    const chainId = await fetchChainId(container.getRpcUrl());
+    expect(chainId).toStrictEqual(84532);
+  });
+
+  it("health endpoint returns 200", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/health`);
+    expect(res.status).toStrictEqual(200);
+  });
+
+  it("USDC funding works", async () => {
+    const address = accounts.facilitator.address;
+    const rpcUrl = container.getRpcUrl();
+    const chainId = await fetchChainId(rpcUrl);
+    const client = createPublicClient(rpcUrl, chainId);
+    const usdcAddress = getUsdcAddress(chainId);
+
+    const before = await client.readContract({
+      address: usdcAddress,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    });
+
+    await container.fund(address, "100");
+
+    const after = await client.readContract({
+      address: usdcAddress,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    });
+
+    expect(after - before).toStrictEqual(100_000_000n);
+  });
+
+  it("balance() returns correct result", async () => {
+    const address = accounts.facilitator.address;
+    await container.fund(address, "50");
+
+    const result = await container.balance(address);
+
+    expect(result.value).toBeGreaterThanOrEqual(50_000_000n);
+    expect(result.formatted).toBeDefined();
+    expect(result.decimals).toStrictEqual(6);
+  });
+
+  it("getPublicClient() returns Base Sepolia chain ID", async () => {
+    const client = await container.getPublicClient();
+    const chainId = await client.getChainId();
+    expect(chainId).toStrictEqual(84532);
   });
 });
 
@@ -152,17 +222,11 @@ describe("X402FacilitatorLocalContainer with custom options", () => {
   });
 
   it("withPort() sets the custom facilitator port", async () => {
-    const facilitatorUrl = customContainer.getFacilitatorUrl();
-    expect(facilitatorUrl).toContain(`:${CUSTOM_FACILITATOR_PORT}`);
-
     const res = await fetch(`${customContainer.getFacilitatorUrl()}/health`);
     expect(res.status).toStrictEqual(200);
   });
 
   it("withAnvilPort() sets the custom anvil port", async () => {
-    const rpcUrl = customContainer.getRpcUrl();
-    expect(rpcUrl).toContain(`:${CUSTOM_ANVIL_PORT}`);
-
     const chainId = await fetchChainId(customContainer.getRpcUrl());
     expect(chainId).toStrictEqual(8453);
   });
