@@ -16,4 +16,4 @@ COPY dist/ ./dist/
 USER node
 EXPOSE 8545 4022
 ENTRYPOINT ["node", "dist/cli.js", "dev", "--anvil-port", "8545", "--anvil-host", "0.0.0.0", "--port", "4022"]
-CMD ["--rpc-url", "https://mainnet.base.org"]
+CMD ["--network", "base"]

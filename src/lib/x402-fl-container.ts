@@ -8,7 +8,12 @@ import type { PublicClient } from "viem";
 import { fundAddress, type FundResult } from "./fund.js";
 import { fetchChainId, createPublicClient } from "./chain.js";
 import { ERC20_ABI } from "./abi.js";
-import { USDC_ADDRESS, formatTokenAmount } from "./config.js";
+import {
+  getUsdcAddress,
+  formatTokenAmount,
+  getNetwork,
+  NetworkName,
+} from "./config.js";
 
 export interface BalanceResult {
   value: bigint;
@@ -20,6 +25,7 @@ const DEFAULT_ANVIL_PORT = 8545;
 const DEFAULT_FACILITATOR_PORT = 4022;
 
 export class X402FacilitatorLocalContainer extends GenericContainer {
+  private networkName: string | undefined;
   private forkUrl: string | undefined;
   private facilitatorPort: number = DEFAULT_FACILITATOR_PORT;
   private anvilPort: number = DEFAULT_ANVIL_PORT;
@@ -31,8 +37,18 @@ export class X402FacilitatorLocalContainer extends GenericContainer {
     this.withStartupTimeout(120_000);
   }
 
+  /** Set the fork RPC URL (and defaults) from a named network preset. */
+  withNetworkPreset(name: NetworkName): this {
+    getNetwork(name); // Validate the name eagerly
+    this.networkName = name;
+    this.forkUrl = undefined;
+    return this;
+  }
+
+  /** Override the fork RPC URL directly. Takes precedence over withNetworkPreset(). */
   withForkUrl(url: string): this {
     this.forkUrl = url;
+    this.networkName = undefined;
     return this;
   }
 
@@ -59,7 +75,9 @@ export class X402FacilitatorLocalContainer extends GenericContainer {
   override async start(): Promise<StartedX402FacilitatorLocalContainer> {
     const cmd: string[] = [];
 
-    if (this.forkUrl) {
+    if (this.networkName) {
+      cmd.push("--network", this.networkName);
+    } else if (this.forkUrl) {
       cmd.push("--rpc-url", this.forkUrl);
     }
     if (this.facilitatorPort !== DEFAULT_FACILITATOR_PORT) {
@@ -79,8 +97,10 @@ export class X402FacilitatorLocalContainer extends GenericContainer {
       this.withCommand(cmd);
     }
 
-    this.withExposedPorts(this.anvilPort, this.facilitatorPort)
-      .withWaitStrategy(Wait.forHttp("/health", this.facilitatorPort));
+    this.withExposedPorts(
+      this.anvilPort,
+      this.facilitatorPort,
+    ).withWaitStrategy(Wait.forHttp("/health", this.facilitatorPort));
 
     const started = await super.start();
     return new StartedX402FacilitatorLocalContainer(
@@ -130,15 +150,17 @@ export class StartedX402FacilitatorLocalContainer extends AbstractStartedContain
 
   async balance(address: `0x${string}`): Promise<BalanceResult> {
     const client = await this.getPublicClient();
+    const chainId = await client.getChainId();
+    const usdcAddress = getUsdcAddress(chainId);
 
     const decimals = await client.readContract({
-      address: USDC_ADDRESS,
+      address: usdcAddress,
       abi: ERC20_ABI,
       functionName: "decimals",
     });
 
     const value = await client.readContract({
-      address: USDC_ADDRESS,
+      address: usdcAddress,
       abi: ERC20_ABI,
       functionName: "balanceOf",
       args: [address],

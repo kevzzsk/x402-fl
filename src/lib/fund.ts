@@ -8,7 +8,7 @@ import {
   toHex,
 } from "viem";
 import { createLocalChain, fetchChainId } from "./chain.js";
-import { DEFAULT_DECIMALS, parseTokenAmount, USDC_ADDRESS } from "./config.js";
+import { DEFAULT_DECIMALS, parseTokenAmount, getUsdcAddress } from "./config.js";
 import { ERC20_ABI } from "./abi.js";
 
 export interface FundResult {
@@ -104,7 +104,7 @@ export async function fundAddress(
   rpcUrl: string,
   address: `0x${string}`,
   amount: string,
-  tokenAddress: `0x${string}` = USDC_ADDRESS,
+  tokenAddress?: `0x${string}`,
 ): Promise<FundResult> {
   if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
     throw new Error(`Invalid address: ${address}`);
@@ -114,6 +114,7 @@ export async function fundAddress(
   }
 
   const chainId = await fetchChainId(rpcUrl);
+  tokenAddress ??= getUsdcAddress(chainId);
   const chain = createLocalChain(rpcUrl, chainId);
   const client = createTestClient({
     mode: "anvil",

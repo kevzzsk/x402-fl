@@ -6,7 +6,7 @@ import {
   defaults,
   DEFAULT_DECIMALS,
   formatTokenAmount,
-  USDC_ADDRESS,
+  getUsdcAddress,
 } from "../lib/config.js";
 import { parseAddress, parsePort } from "../lib/parsers.js";
 import { ERC20_ABI } from "../lib/abi.js";
@@ -57,12 +57,13 @@ export async function balanceCommand(options: BalanceOptions): Promise<void> {
     process.exit(1);
   }
 
+  const usdcAddress = getUsdcAddress(chainId);
   const client = createPublicClient(rpcUrl, chainId);
 
   let decimals = DEFAULT_DECIMALS;
   try {
     decimals = await client.readContract({
-      address: USDC_ADDRESS,
+      address: usdcAddress,
       abi: ERC20_ABI,
       functionName: "decimals",
     });
@@ -71,7 +72,7 @@ export async function balanceCommand(options: BalanceOptions): Promise<void> {
   }
 
   const balance = await client.readContract({
-    address: USDC_ADDRESS,
+    address: usdcAddress,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [address],
@@ -80,7 +81,7 @@ export async function balanceCommand(options: BalanceOptions): Promise<void> {
   console.log(
     boxen(
       [
-        `${chalk.dim("Token")}    ${USDC_ADDRESS}`,
+        `${chalk.dim("Token")}    ${usdcAddress}`,
         `${chalk.dim("Address")}  ${address}`,
         `${chalk.dim("Balance")}  ${chalk.green.bold(formatTokenAmount(balance, decimals))} USDC`,
       ].join("\n"),
