@@ -45,6 +45,7 @@
     "chalk": "^5.6.2",
     "commander": "^12.1.0",
     "express": "^4.21.2",
+    "prool": "^0.2.3",
     "viem": "^2.39.3"
   },
   "devDependencies": {
@@ -66,6 +67,6 @@
   },
   "packageManager": "pnpm@10.28.2",
   "engines": {
-    "node": ">=24"
+    "node": ">=20"
   }
 }

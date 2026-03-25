@@ -14,12 +14,9 @@ import {
   getNetwork,
   type NetworkName,
 } from "./config.js";
+import type { BalanceResult } from "./types.js";
 
-export interface BalanceResult {
-  value: bigint;
-  formatted: string;
-  decimals: number;
-}
+export type { BalanceResult };
 
 const DEFAULT_ANVIL_PORT = 8545;
 const DEFAULT_FACILITATOR_PORT = 4022;

@@ -29,8 +29,7 @@ export async function resolvePort(
   if (!(await isPortInUse(port))) return port;
 
   if (explicit) {
-    console.error(`Error: ${label} port ${port} is already in use`);
-    process.exit(1);
+    throw new Error(`${label} port ${port} is already in use`);
   }
 
   let candidate = port + 1;
@@ -42,6 +41,5 @@ export async function resolvePort(
     candidate++;
   }
 
-  console.error(`Error: no free port found starting from ${port} for ${label}`);
-  process.exit(1);
+  throw new Error(`No free port found starting from ${port} for ${label}`);
 }

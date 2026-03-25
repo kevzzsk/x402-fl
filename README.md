@@ -23,7 +23,7 @@ That's it. Behind the scenes, `x402-fl`:
 
 ## Prerequisites
 
-- Node.js 24+
+- Node.js 20+
 - [pnpm](https://pnpm.io/)
 - One of:
   - [Foundry](https://www.getfoundry.sh/introduction/installation) (recommended, provides `anvil`)
@@ -49,7 +49,7 @@ This starts Anvil on port 8545 and launches the facilitator on port 4022.
 ### From source
 
 ```bash
-git clone https://github.com/anthropics/x402-fl.git
+git clone https://github.com/kevzzsk/x402-fl.git
 cd x402-fl
 pnpm install
 pnpm dev
@@ -282,7 +282,7 @@ Any address can be funded using `x402-fl fund`.
 
 ## Issues
 
-Found a bug or have a feature request? [Open an issue](https://github.com/anthropics/x402-fl/issues).
+Found a bug or have a feature request? [Open an issue](https://github.com/kevzzsk/x402-fl/issues).
 
 ## License
 

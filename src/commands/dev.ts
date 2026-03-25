@@ -1,9 +1,8 @@
 import chalk from "chalk";
 import boxen from "boxen";
 import { Option, type Command } from "commander";
-import type { ChildProcess } from "child_process";
 import type { Server } from "http";
-import { startAnvil, waitForAnvil, isFoundryInstalled } from "../lib/anvil.js";
+import { startAnvil, waitForAnvil, isFoundryInstalled, type AnvilInstance } from "../lib/anvil.js";
 import { startFacilitator } from "../lib/facilitator.js";
 import { fetchChainId } from "../lib/chain.js";
 import { defaults, networkId, getUsdcAddress, getNetwork, NETWORKS, DEFAULT_NETWORK } from "../lib/config.js";
@@ -49,17 +48,22 @@ Examples:
     .action(async (opts, command) => {
       const rpcUrl = opts.rpcUrl || getNetwork(opts.network).rpcUrl;
 
-      await devCommand({
-        port: opts.port,
-        anvilPort: opts.anvilPort,
-        anvilHost: opts.anvilHost,
-        rpcUrl,
-        privateKey: opts.privateKey,
-        portExplicit: command.getOptionValueSource("port") !== "default",
-        anvilPortExplicit:
-          command.getOptionValueSource("anvilPort") !== "default",
-        verbose: opts.verbose,
-      });
+      try {
+        await devCommand({
+          port: opts.port,
+          anvilPort: opts.anvilPort,
+          anvilHost: opts.anvilHost,
+          rpcUrl,
+          privateKey: opts.privateKey,
+          portExplicit: command.getOptionValueSource("port") !== "default",
+          anvilPortExplicit:
+            command.getOptionValueSource("anvilPort") !== "default",
+          verbose: opts.verbose,
+        });
+      } catch (err) {
+        console.error(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
     });
 }
 
@@ -81,7 +85,7 @@ export async function devCommand(options: DevOptions): Promise<void> {
   const facilitatorPort = await resolvePort(options.port, options.portExplicit, "Facilitator");
 
   const localRpcUrl = `http://localhost:${anvilPort}`;
-  let anvilProc: ChildProcess | null = null;
+  let anvilProc: AnvilInstance | null = null;
   let server: Server | null = null;
 
   function cleanup() {
@@ -96,8 +100,7 @@ export async function devCommand(options: DevOptions): Promise<void> {
     }
     if (anvilProc) {
       pending++;
-      anvilProc.on("exit", () => done());
-      anvilProc.kill("SIGTERM");
+      anvilProc.stop().then(done, done);
       anvilProc = null;
     }
     if (pending === 0) process.exit(0);

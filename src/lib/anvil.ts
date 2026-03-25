@@ -2,9 +2,9 @@ import {
   execSync,
   execFileSync,
   spawn,
-  type ChildProcess,
 } from "child_process";
 import { createPublicClient as viemCreatePublicClient, http } from "viem";
+import { Instance } from "prool";
 import chalk from "chalk";
 import boxen from "boxen";
 import { verboseLog2 } from "./log.js";
@@ -16,6 +16,11 @@ export interface AnvilOptions {
   port: number;
   chainId: number;
   host?: string;
+}
+
+export interface AnvilInstance {
+  stop(): Promise<void>;
+  on(event: "exit", listener: (code: number | null) => void): void;
 }
 
 export function isFoundryInstalled(): boolean {
@@ -37,7 +42,7 @@ export function isDockerAvailable(): boolean {
   }
 }
 
-export function startAnvil(options: AnvilOptions): ChildProcess {
+export function startAnvil(options: AnvilOptions): AnvilInstance {
   if (isFoundryInstalled()) {
     return startNativeAnvil(options);
   }
@@ -63,52 +68,43 @@ export function startAnvil(options: AnvilOptions): ChildProcess {
     return startDockerAnvil(options);
   }
 
-  console.error(
-    [
-      chalk.red(
-        "Error: Cannot start Anvil — neither Foundry nor Docker is available.",
-      ),
-      "",
-      "  Option 1 (recommended): Install Foundry",
-      `    ${chalk.cyan("https://www.getfoundry.sh/introduction/installation")}`,
-      "",
-      "  Option 2: Install Docker",
-      `    ${chalk.cyan("https://docs.docker.com/get-docker/")}`,
-    ].join("\n"),
+  throw new Error(
+    "Cannot start Anvil — neither Foundry nor Docker is available.\n" +
+    "Install Foundry: https://www.getfoundry.sh/introduction/installation\n" +
+    "Or install Docker: https://docs.docker.com/get-docker/"
   );
-  process.exit(1);
 }
 
-function startNativeAnvil(options: AnvilOptions): ChildProcess {
-  const args = [
-    "--fork-url",
-    options.forkUrl,
-    "--chain-id",
-    String(options.chainId),
-    "--port",
-    String(options.port),
-    "--host",
-    options.host ?? "127.0.0.1",
-  ];
-
-  const proc = spawn("anvil", args, {
-    stdio: ["ignore", "pipe", "pipe"],
+function startNativeAnvil(options: AnvilOptions): AnvilInstance {
+  const instance = Instance.anvil({
+    forkUrl: options.forkUrl,
+    chainId: options.chainId,
+    port: options.port,
+    host: options.host ?? "127.0.0.1",
   });
 
-  proc.stdout?.on("data", (data: Buffer) => {
-    const line = data.toString().trim();
-    if (line) verboseLog2(`[anvil] ${line}`);
+  instance.on("stdout", (msg) => verboseLog2(`[anvil] ${msg}`));
+  instance.on("stderr", (msg) => verboseLog2(`[anvil] ${msg}`));
+
+  // Start is async but we return the instance immediately
+  // (matches previous spawn behavior — caller uses waitForAnvil).
+  // Attach .catch() to surface startup failures instead of crashing with
+  // an unhandled rejection.
+  instance.start().catch((err) => {
+    throw new Error(`Failed to start Anvil: ${err}`);
   });
 
-  proc.stderr?.on("data", (data: Buffer) => {
-    const line = data.toString().trim();
-    if (line) verboseLog2(`[anvil] ${line}`);
-  });
-
-  return proc;
+  return {
+    stop: () => instance.stop(),
+    on: (event, listener) => {
+      if (event === "exit") {
+        instance.on("exit", (code) => listener(code));
+      }
+    },
+  };
 }
 
-function startDockerAnvil(options: AnvilOptions): ChildProcess {
+function startDockerAnvil(options: AnvilOptions): AnvilInstance {
   const containerName = `x402-fl-anvil-${options.port}`;
   const args = [
     "run",
@@ -132,19 +128,6 @@ function startDockerAnvil(options: AnvilOptions): ChildProcess {
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  const originalKill = proc.kill.bind(proc);
-  proc.kill = (signal?: NodeJS.Signals | number): boolean => {
-    try {
-      execFileSync("docker", ["stop", "--time", "3", containerName], {
-        stdio: "ignore",
-        timeout: 5000,
-      });
-    } catch {
-      // Container may already be stopped
-    }
-    return originalKill(signal);
-  };
-
   proc.stdout?.on("data", (data: Buffer) => {
     const line = data.toString().trim();
     if (line) verboseLog2(`[anvil:docker] ${line}`);
@@ -155,7 +138,31 @@ function startDockerAnvil(options: AnvilOptions): ChildProcess {
     if (line) verboseLog2(`[anvil:docker] ${line}`);
   });
 
-  return proc;
+  return {
+    stop: () =>
+      new Promise<void>((resolve) => {
+        // If the process already exited, resolve immediately to avoid hanging.
+        if (proc.exitCode !== null) {
+          resolve();
+          return;
+        }
+        proc.on("exit", () => resolve());
+        try {
+          execFileSync("docker", ["stop", "--time", "3", containerName], {
+            stdio: "ignore",
+            timeout: 5000,
+          });
+        } catch {
+          // Container may already be stopped
+        }
+        proc.kill("SIGTERM");
+      }),
+    on: (event, listener) => {
+      if (event === "exit") {
+        proc.on("exit", (code) => listener(code));
+      }
+    },
+  };
 }
 
 export async function waitForAnvil(
