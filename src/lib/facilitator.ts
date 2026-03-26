@@ -3,21 +3,26 @@ import type { Server } from "http";
 import { x402Facilitator } from "@x402/core/facilitator";
 import type { PaymentPayload, PaymentRequirements } from "@x402/core/types";
 import { toFacilitatorEvmSigner } from "@x402/evm";
-import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import { createWalletClient } from "./chain.js";
 import { accounts, networkId } from "./config.js";
 import { verboseLog1 } from "./log.js";
+import { getSchemeFactories } from "./schemes.js";
+
+export interface NetworkConfig {
+  rpcUrl: string;
+  chainId: number;
+}
 
 export interface FacilitatorOptions {
   port: number;
-  rpcUrl: string;
-  chainId: number;
+  networks: NetworkConfig[];
   privateKey?: `0x${string}`;
 }
 
 export interface FacilitatorResult {
   server: Server;
   address: `0x${string}`;
+  networks: readonly { network: string; chainId: number }[];
 }
 
 export function startFacilitator(
@@ -25,26 +30,40 @@ export function startFacilitator(
 ): Promise<FacilitatorResult> {
   const privateKey = options.privateKey ?? accounts.facilitator.privateKey;
 
-  const viemClient = createWalletClient(
-    privateKey,
-    options.rpcUrl,
-    options.chainId,
-  );
-
-  const evmSigner = toFacilitatorEvmSigner({
-    address: viemClient.account.address,
-    readContract: (args) => viemClient.readContract(args),
-    verifyTypedData: (args) => viemClient.verifyTypedData(args as any),
-    writeContract: (args) => viemClient.writeContract(args),
-    sendTransaction: (args) => viemClient.sendTransaction(args),
-    waitForTransactionReceipt: (args) =>
-      viemClient.waitForTransactionReceipt(args),
-    getCode: (args) => viemClient.getCode(args),
-  });
-
   const facilitator = new x402Facilitator();
-  const network = networkId(options.chainId);
-  facilitator.register(network, new ExactEvmScheme(evmSigner));
+  const schemeFactories = getSchemeFactories();
+  const registeredNetworks: Array<{ network: string; chainId: number }> = [];
+
+  let address: `0x${string}` | undefined;
+
+  for (const net of options.networks) {
+    const viemClient = createWalletClient(privateKey, net.rpcUrl, net.chainId);
+    address ??= viemClient.account.address;
+
+    const evmSigner = toFacilitatorEvmSigner({
+      address: viemClient.account.address,
+      readContract: (args) => viemClient.readContract(args),
+      verifyTypedData: (args) => viemClient.verifyTypedData(args as any),
+      writeContract: (args) => viemClient.writeContract(args),
+      sendTransaction: (args) => viemClient.sendTransaction(args),
+      waitForTransactionReceipt: (args) =>
+        viemClient.waitForTransactionReceipt(args),
+      getCode: (args) => viemClient.getCode(args),
+    });
+
+    const network = networkId(net.chainId);
+    for (const [, factory] of schemeFactories) {
+      facilitator.register(network, factory(evmSigner));
+    }
+    registeredNetworks.push({ network, chainId: net.chainId });
+  }
+
+  if (!address) {
+    throw new Error("At least one network must be configured");
+  }
+
+  const facilitatorAddress: `0x${string}` = address;
+  Object.freeze(registeredNetworks);
 
   const app = express();
   app.use(express.json());
@@ -140,14 +159,14 @@ export function startFacilitator(
   app.get("/health", (_req, res) => {
     res.json({
       status: "ok",
-      network,
-      facilitator: viemClient.account.address,
+      networks: registeredNetworks.map((n) => n.network),
+      facilitator: facilitatorAddress,
     });
   });
 
   return new Promise<FacilitatorResult>((resolve, reject) => {
     const server = app.listen(options.port, () => {
-      resolve({ server, address: viemClient.account.address });
+      resolve({ server, address: facilitatorAddress, networks: registeredNetworks });
     });
     server.on("error", reject);
   });

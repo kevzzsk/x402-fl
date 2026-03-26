@@ -4,11 +4,10 @@ import { Option, type Command } from "commander";
 import type { Server } from "http";
 import { startAnvil, waitForAnvil, isFoundryInstalled, type AnvilInstance } from "../lib/anvil.js";
 import { startFacilitator } from "../lib/facilitator.js";
-import { fetchChainId } from "../lib/chain.js";
-import { defaults, networkId, getUsdcAddress, getNetwork, NETWORKS, DEFAULT_NETWORK, type NetworkPreset } from "../lib/config.js";
+import { defaults, getUsdcAddress, getNetwork, NETWORKS, DEFAULT_NETWORK, type NetworkPreset } from "../lib/config.js";
 import type { NetworkConfig } from "../lib/facilitator.js";
 import { parsePort, parsePrivateKey } from "../lib/parsers.js";
-import { resolvePort } from "../lib/port.js";
+import { resolvePorts, resolvePort } from "../lib/port.js";
 import { setVerbosity } from "../lib/log.js";
 
 export function register(program: Command) {
@@ -25,16 +24,16 @@ export function register(program: Command) {
     )
     .option(
       "--anvil-port <number>",
-      `Anvil JSON-RPC port`,
+      `Anvil JSON-RPC port (first instance)`,
       parsePort,
       defaults.anvilPort,
     )
     .addOption(
-      new Option("--network <name>", "network preset")
+      new Option("--network <name...>", "network preset(s) to fork (repeatable)")
         .choices(Object.keys(NETWORKS))
-        .default(DEFAULT_NETWORK),
+        .default([DEFAULT_NETWORK]),
     )
-    .option("--rpc-url <url>", `RPC URL to fork (overrides the --network preset's default)`)
+    .option("--rpc-url <url>", `RPC URL to fork (overrides the first --network preset's default)`)
     .option("--anvil-host <host>", "Anvil listen host (default: 127.0.0.1)")
     .option("--private-key <key>", "facilitator private key (default: Anvil account 0)", parsePrivateKey)
     .option("-v, --verbose", "verbose output (-v facilitator logs, -vv anvil logs)", (_: string, prev: number) => prev + 1, 0)
@@ -44,17 +43,17 @@ export function register(program: Command) {
 Examples:
   $ x402-fl dev
   $ x402-fl dev --network base-sepolia
+  $ x402-fl dev --network base --network base-sepolia
   $ x402-fl dev --rpc-url https://custom-rpc.example.com --port 5000`,
     )
     .action(async (opts, command) => {
-      const rpcUrl = opts.rpcUrl || getNetwork(opts.network).rpcUrl;
-
       try {
         await devCommand({
           port: opts.port,
           anvilPort: opts.anvilPort,
           anvilHost: opts.anvilHost,
-          rpcUrl,
+          networks: opts.network,
+          rpcUrl: opts.rpcUrl,
           privateKey: opts.privateKey,
           portExplicit: command.getOptionValueSource("port") !== "default",
           anvilPortExplicit:
@@ -72,21 +71,42 @@ export interface DevOptions {
   port: number;
   anvilPort: number;
   anvilHost?: string;
-  rpcUrl: string;
+  networks: string[];
+  rpcUrl?: string;
   privateKey?: `0x${string}`;
   portExplicit: boolean;
   anvilPortExplicit: boolean;
   verbose: number;
 }
 
+interface AnvilEntry {
+  preset: NetworkPreset;
+  port: number;
+  localRpcUrl: string;
+  proc: AnvilInstance;
+}
+
 export async function devCommand(options: DevOptions): Promise<void> {
   setVerbosity(options.verbose);
 
-  const anvilPort = await resolvePort(options.anvilPort, options.anvilPortExplicit, "Anvil");
   const facilitatorPort = await resolvePort(options.port, options.portExplicit, "Facilitator");
 
-  const localRpcUrl = `http://localhost:${anvilPort}`;
-  let anvilProc: AnvilInstance | null = null;
+  const presets = options.networks.map((n) => getNetwork(n));
+
+  // Validate USDC support for all networks early
+  for (const preset of presets) {
+    getUsdcAddress(preset.chainId);
+  }
+
+  // Resolve ports for all Anvil instances
+  const anvilPorts = await resolvePorts(
+    options.anvilPort,
+    presets.length,
+    options.anvilPortExplicit,
+    "Anvil",
+  );
+
+  const anvils: AnvilEntry[] = [];
   let server: Server | null = null;
 
   function cleanup() {
@@ -99,11 +119,11 @@ export async function devCommand(options: DevOptions): Promise<void> {
       server.close(() => done());
       server = null;
     }
-    if (anvilProc) {
+    for (const anvil of anvils) {
       pending++;
-      anvilProc.stop().then(done, done);
-      anvilProc = null;
+      anvil.proc.stop().then(done, done);
     }
+    anvils.length = 0;
     if (pending === 0) process.exit(0);
 
     // Force exit after 3s if graceful shutdown hangs
@@ -113,48 +133,54 @@ export async function devCommand(options: DevOptions): Promise<void> {
   process.on("SIGINT", cleanup);
   process.on("SIGTERM", cleanup);
 
-  // 0. Detect chain ID from fork RPC and validate USDC support
-  console.log(chalk.dim(`Detecting chain ID from ${options.rpcUrl}...`));
-  const chainId = await fetchChainId(options.rpcUrl);
-  console.log(chalk.dim(`Detected chain ID: ${chainId}`));
-
-  // Validate early — before starting any background processes
-  getUsdcAddress(chainId);
-
-  // 1. Start Anvil
-  console.log(
-    chalk.dim(
-      `Starting Anvil (forking chain ${chainId}, port ${anvilPort})...`,
-    ),
-  );
-  anvilProc = startAnvil({
-    forkUrl: options.rpcUrl,
-    port: anvilPort,
-    chainId,
-    host: options.anvilHost,
-  });
-
-  anvilProc.on("exit", (code) => {
-    if (code !== null && code !== 0) {
-      console.error(chalk.red(`Anvil exited with code ${code}`));
-      process.exit(1);
-    }
-  });
-
-  // 2. Wait for Anvil to be ready
-  console.log(chalk.dim("Waiting for Anvil to be ready..."));
   const anvilTimeout = isFoundryInstalled() ? 30_000 : 120_000;
-  await waitForAnvil(localRpcUrl, anvilTimeout);
-  console.log(chalk.dim("Anvil is ready."));
 
-  // 3. Start facilitator (register all networks; use local Anvil for forked chain)
-  console.log(chalk.dim(`Starting facilitator on port ${facilitatorPort}...`));
-  const allNetworks: NetworkConfig[] = Object.values(NETWORKS).map(
-    (preset: NetworkPreset) =>
-      preset.chainId === chainId
-        ? { rpcUrl: localRpcUrl, chainId: preset.chainId }
-        : { rpcUrl: preset.rpcUrl, chainId: preset.chainId },
+  // Start Anvil instances
+  for (let i = 0; i < presets.length; i++) {
+    const preset = presets[i];
+    const port = anvilPorts[i];
+    const forkUrl = (i === 0 && options.rpcUrl) ? options.rpcUrl : preset.rpcUrl;
+
+    console.log(
+      chalk.dim(`Starting Anvil for ${preset.name} (chain ${preset.chainId}, port ${port})...`),
+    );
+
+    const proc = startAnvil({
+      forkUrl,
+      port,
+      chainId: preset.chainId,
+      host: options.anvilHost,
+    });
+
+    proc.on("exit", (code) => {
+      if (code !== null && code !== 0) {
+        console.error(chalk.red(`Anvil (${preset.name}) exited with code ${code}`));
+        process.exit(1);
+      }
+    });
+
+    const localRpcUrl = `http://localhost:${port}`;
+    anvils.push({ preset, port, localRpcUrl, proc });
+  }
+
+  // Wait for all Anvils to be ready (in parallel)
+  console.log(chalk.dim(`Waiting for ${anvils.length} Anvil instance(s) to be ready...`));
+  await Promise.all(
+    anvils.map((anvil) => waitForAnvil(anvil.localRpcUrl, anvilTimeout)),
   );
+  console.log(chalk.dim("All Anvil instances are ready."));
+
+  // Build facilitator network config: forked chains use local Anvil, rest use remote
+  const forkedChainIds = new Set(anvils.map((a) => a.preset.chainId));
+  const allNetworks: NetworkConfig[] = [
+    ...anvils.map((a) => ({ rpcUrl: a.localRpcUrl, chainId: a.preset.chainId })),
+    ...Object.values(NETWORKS)
+      .filter((p) => !forkedChainIds.has(p.chainId))
+      .map((p) => ({ rpcUrl: p.rpcUrl, chainId: p.chainId })),
+  ];
+
+  // Start facilitator
+  console.log(chalk.dim(`Starting facilitator on port ${facilitatorPort}...`));
   const facilitator = await startFacilitator({
     port: facilitatorPort,
     networks: allNetworks,
@@ -162,24 +188,44 @@ export async function devCommand(options: DevOptions): Promise<void> {
   });
   server = facilitator.server;
 
-  const network = networkId(chainId);
+  // Print summary
+  const anvilLines = anvils.map(
+    (a) => `  ${a.preset.name.padEnd(14)} ${chalk.cyan(`http://localhost:${a.port}`)}`,
+  );
 
-  // 4. Print summary
+  const networkLines = facilitator.networks.map((n) => {
+    const isForked = forkedChainIds.has(n.chainId);
+    const label = isForked ? chalk.green("anvil") : chalk.dim("remote");
+    return `  ${n.network}  (${label})`;
+  });
+
+  const usdcLines = facilitator.networks.map((n) => {
+    try {
+      return `  ${n.network}  ${getUsdcAddress(n.chainId)}`;
+    } catch {
+      return `  ${n.network}  ${chalk.dim("n/a")}`;
+    }
+  });
+
   console.log(
     boxen(
       [
-        `${chalk.dim("Anvil RPC")}     ${chalk.cyan(localRpcUrl)}`,
+        chalk.dim("Anvil instances"),
+        ...anvilLines,
+        "",
         `${chalk.dim("Facilitator")}   ${chalk.cyan(`http://localhost:${facilitatorPort}`)}`,
-        `${chalk.dim("Network")}       ${network}`,
-        `${chalk.dim("Chain ID")}      ${chainId}`,
+        "",
+        chalk.dim("Networks"),
+        ...networkLines,
         "",
         chalk.dim("Accounts"),
         `  ${chalk.dim("Facilitator")}  ${facilitator.address}`,
         "",
-        `${chalk.dim("USDC")}          ${getUsdcAddress(chainId)}`,
+        chalk.dim("USDC"),
+        ...usdcLines,
         "",
         `${chalk.dim("Fund account with:")}`,
-        `$ ${chalk.white("x402-fl fund <address> <amount>")}`,
+        `$ ${chalk.white("x402-fl fund <address> <amount> --anvil-port <port>")}`,
         "",
         chalk.dim("Press Ctrl+C to stop."),
       ].join("\n"),

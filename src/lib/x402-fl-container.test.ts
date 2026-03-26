@@ -116,6 +116,41 @@ describe("X402FacilitatorLocalContainer", () => {
     expect(chainId).toStrictEqual(8453);
   });
 
+  it("/health returns all networks regardless of Anvil fork", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/health`);
+    const body = await res.json();
+    expect(body.networks).toBeInstanceOf(Array);
+    expect(body.networks).toContain("eip155:8453");
+    expect(body.networks).toContain("eip155:84532");
+  });
+
+  it("/supported lists exact scheme for all networks", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/supported`);
+    const body = await res.json();
+    expect(body.kinds).toBeInstanceOf(Array);
+
+    const exactOnBase = body.kinds.find(
+      (k: { scheme: string; network: string }) =>
+        k.scheme === "exact" && k.network === "eip155:8453",
+    );
+    expect(exactOnBase).toBeDefined();
+    expect(exactOnBase.x402Version).toStrictEqual(2);
+
+    const exactOnSepolia = body.kinds.find(
+      (k: { scheme: string; network: string }) =>
+        k.scheme === "exact" && k.network === "eip155:84532",
+    );
+    expect(exactOnSepolia).toBeDefined();
+  });
+
+  it("/supported includes signers for eip155 family", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/supported`);
+    const body = await res.json();
+    expect(body.signers).toBeDefined();
+    expect(body.signers["eip155:*"]).toBeInstanceOf(Array);
+    expect(body.signers["eip155:*"].length).toBeGreaterThanOrEqual(1);
+  });
+
   it("all builder methods are chainable", () => {
     const instance = new X402FacilitatorLocalContainer();
     const returned = instance
@@ -196,6 +231,29 @@ describe("X402FacilitatorLocalContainer (Base Sepolia)", () => {
     const chainId = await client.getChainId();
     expect(chainId).toStrictEqual(84532);
   });
+
+  it("/health returns all networks even when Anvil forks base-sepolia", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/health`);
+    const body = await res.json();
+    expect(body.networks).toContain("eip155:84532");
+    expect(body.networks).toContain("eip155:8453");
+  });
+
+  it("/supported lists exact scheme for all networks", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/supported`);
+    const body = await res.json();
+    const exactOnSepolia = body.kinds.find(
+      (k: { scheme: string; network: string }) =>
+        k.scheme === "exact" && k.network === "eip155:84532",
+    );
+    expect(exactOnSepolia).toBeDefined();
+
+    const exactOnBase = body.kinds.find(
+      (k: { scheme: string; network: string }) =>
+        k.scheme === "exact" && k.network === "eip155:8453",
+    );
+    expect(exactOnBase).toBeDefined();
+  });
 });
 
 describe("X402FacilitatorLocalContainer with custom options", () => {
@@ -237,5 +295,70 @@ describe("X402FacilitatorLocalContainer with custom options", () => {
     expect(body.facilitator.toLowerCase()).toStrictEqual(
       expectedAddress.toLowerCase(),
     );
+  });
+});
+
+describe("X402FacilitatorLocalContainer (multi-network)", () => {
+  let container: StartedX402FacilitatorLocalContainer;
+
+  beforeAll(async () => {
+    container = await new X402FacilitatorLocalContainer(imageTag)
+      .withNetworkPreset("base", "base-sepolia")
+      .start();
+  });
+
+  afterAll(async () => {
+    await container?.stop();
+  });
+
+  it("Base Anvil returns correct chain ID", async () => {
+    const chainId = await fetchChainId(container.getRpcUrl("base"));
+    expect(chainId).toStrictEqual(8453);
+  });
+
+  it("Base Sepolia Anvil returns correct chain ID", async () => {
+    const chainId = await fetchChainId(container.getRpcUrl("base-sepolia"));
+    expect(chainId).toStrictEqual(84532);
+  });
+
+  it("getRpcUrl() without args returns first network", async () => {
+    const chainId = await fetchChainId(container.getRpcUrl());
+    expect(chainId).toStrictEqual(8453);
+  });
+
+  it("facilitator health shows all networks", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/health`);
+    const body = await res.json();
+    expect(body.networks).toContain("eip155:8453");
+    expect(body.networks).toContain("eip155:84532");
+  });
+
+  it("funding works on both networks by name", async () => {
+    const address = accounts.facilitator.address;
+
+    await container.fund(address, "50", "base");
+    const baseBalance = await container.balance(address, "base");
+    expect(baseBalance.value).toBeGreaterThanOrEqual(50_000_000n);
+
+    await container.fund(address, "50", "base-sepolia");
+    const sepoliaBalance = await container.balance(address, "base-sepolia");
+    expect(sepoliaBalance.value).toBeGreaterThanOrEqual(50_000_000n);
+  });
+
+  it("/supported lists exact scheme for both networks", async () => {
+    const res = await fetch(`${container.getFacilitatorUrl()}/supported`);
+    const body = await res.json();
+
+    const exactOnBase = body.kinds.find(
+      (k: { scheme: string; network: string }) =>
+        k.scheme === "exact" && k.network === "eip155:8453",
+    );
+    expect(exactOnBase).toBeDefined();
+
+    const exactOnSepolia = body.kinds.find(
+      (k: { scheme: string; network: string }) =>
+        k.scheme === "exact" && k.network === "eip155:84532",
+    );
+    expect(exactOnSepolia).toBeDefined();
   });
 });

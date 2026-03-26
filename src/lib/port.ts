@@ -43,3 +43,23 @@ export async function resolvePort(
 
   throw new Error(`No free port found starting from ${port} for ${label}`);
 }
+
+export async function resolvePorts(
+  basePort: number,
+  count: number,
+  explicit: boolean,
+  label: string,
+): Promise<number[]> {
+  const ports: number[] = [];
+  let candidate = basePort;
+  for (let i = 0; i < count; i++) {
+    const port = await resolvePort(
+      candidate,
+      explicit && i === 0,
+      `${label}[${i}]`,
+    );
+    ports.push(port);
+    candidate = port + 1;
+  }
+  return ports;
+}

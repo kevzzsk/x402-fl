@@ -7,7 +7,7 @@ A local [x402](https://www.x402.org/) facilitator for development and testing. O
 
 > **Warning**: Local development only. Uses Anvil's deterministic private keys, which are publicly known and provide zero security. Do not use in production.
 
-> **Note**: Currently supports USDC on Base. Custom ERC-20 token support is on the [roadmap](#roadmap).
+> **Note**: Currently supports USDC on Base and Base Sepolia. Custom ERC-20 token support is on the [roadmap](#roadmap).
 
 ## What it does
 
@@ -71,14 +71,17 @@ Start Anvil fork + facilitator server for local x402 development.
 x402-fl dev [options]
 ```
 
-| Flag                    | Default                    | Description                                                   |
-| ----------------------- | -------------------------- | ------------------------------------------------------------- |
-| `--port <number>`       | `4022`                     | Facilitator HTTP port                                         |
-| `--anvil-port <number>` | `8545`                     | Anvil RPC port                                                |
-| `--rpc-url <url>`       | `https://mainnet.base.org` | Base RPC URL to fork                                          |
-| `-v`                    |                            | Show facilitator request logs                                 |
-| `-vv`                   |                            | Show facilitator request logs and Anvil process logs          |
-| `--private-key <key>`   |                            | Custom facilitator private key (prefer default Anvil account) |
+| Flag                    | Default                    | Description                                                          |
+| ----------------------- | -------------------------- | -------------------------------------------------------------------- |
+| `--port <number>`       | `4022`                     | Facilitator HTTP port                                                |
+| `--anvil-port <number>` | `8545`                     | Anvil RPC port (first instance; additional instances use next ports)  |
+| `--network <name...>`   | `base`                     | Network preset(s) to fork — repeatable (e.g. `--network base --network base-sepolia`) |
+| `--rpc-url <url>`       | `https://mainnet.base.org` | RPC URL to fork (overrides the first `--network` preset's default)   |
+| `-v`                    |                            | Show facilitator request logs                                        |
+| `-vv`                   |                            | Show facilitator request logs and Anvil process logs                 |
+| `--private-key <key>`   |                            | Custom facilitator private key (prefer default Anvil account)        |
+
+The `--network` flag controls which chains get a local Anvil fork. Specify it multiple times to run multiple Anvil instances (e.g. `--network base --network base-sepolia`). The facilitator always registers all supported schemes across all configured networks, so `GET /supported` will list every scheme/network combination.
 
 > **Warning**: `--private-key` is not recommended
 
@@ -164,7 +167,7 @@ Health check endpoint.
 ```json
 {
   "status": "ok",
-  "network": "base-mainnet",
+  "networks": ["eip155:8453", "eip155:84532"],
   "facilitator": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 }
 ```
@@ -246,17 +249,20 @@ describe("x402 integration", () => {
 | Method                                      | Description                                                    |
 | ------------------------------------------- | -------------------------------------------------------------- |
 | `new X402FacilitatorLocalContainer(image?)` | Create a container (default: `ghcr.io/kevzzsk/x402-fl:latest`) |
-| `.withForkUrl(url)`                         | Set a custom Base RPC URL to fork (chainable)                  |
-| `.start()`                                  | Build the image (if needed) and start the container            |
+| `.withNetworkPreset(...names)`              | Select network preset(s) — pass multiple for multi-Anvil (chainable) |
+| `.withForkUrl(url)`                         | Set a custom RPC URL to fork (chainable)                             |
+| `.start()`                                  | Build the image (if needed) and start the container                  |
 
 #### `StartedX402FacilitatorLocalContainer`
 
-| Method                   | Description                                              |
-| ------------------------ | -------------------------------------------------------- |
-| `.getRpcUrl()`           | Anvil RPC endpoint (`http://host:port`)                  |
-| `.getFacilitatorUrl()`   | Facilitator HTTP endpoint (`http://host:port`)           |
-| `.fund(address, amount)` | Mint USDC to an address (amount in human-readable units) |
-| `.stop()`                | Stop and remove the container                            |
+| Method                              | Description                                                      |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| `.getRpcUrl(network?)`              | Anvil RPC endpoint (pass network name for multi-network setups)  |
+| `.getFacilitatorUrl()`              | Facilitator HTTP endpoint (`http://host:port`)                   |
+| `.fund(address, amount, network?)`  | Mint USDC to an address (network name selects Anvil instance)    |
+| `.balance(address, network?)`       | Get USDC balance (network name selects Anvil instance)           |
+| `.getPublicClient(network?)`        | Get a viem PublicClient (network name selects Anvil instance)    |
+| `.stop()`                           | Stop and remove the container                                    |
 
 > **Note**: The first call to `.start()` pulls the Docker image from GHCR, which may take a moment. Subsequent calls reuse the cached image. You can pass a custom image tag to the constructor if needed.
 
