@@ -1,34 +1,36 @@
 import chalk from "chalk";
 import boxen from "boxen";
-import type { Command } from "commander";
-import { defaults, formatTokenAmount } from "../lib/config.js";
-import { parseAddress, parseAmount, parsePort } from "../lib/parsers.js";
+import { Option, type Command } from "commander";
+import { formatTokenAmount, getNetwork, NETWORKS, DEFAULT_NETWORK } from "../lib/config.js";
+import { parseAddress, parseAmount } from "../lib/parsers.js";
 import { fundAddress } from "../lib/fund.js";
 
 export function register(program: Command) {
   program
     .command("fund")
-    .description("Fund an address with USDC on local Anvil")
+    .description("Fund an address with USDC")
     .argument("<address>", "0x-prefixed Ethereum address to fund", parseAddress)
     .argument("<amount>", "USDC amount (e.g. '100' or '1.5')", parseAmount)
-    .option(
-      "--anvil-port <number>",
-      `Anvil JSON-RPC port`,
-      parsePort,
-      defaults.anvilPort,
+    .addOption(
+      new Option("--network <name>", "network preset")
+        .choices(Object.keys(NETWORKS))
+        .default(DEFAULT_NETWORK),
     )
+    .option("--rpc-url <url>", "RPC URL (overrides --network preset's default)")
     .addHelpText(
       "after",
       `
 Examples:
   $ x402-fl fund 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100
-  $ x402-fl fund 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 1.5 --anvil-port 9545`,
+  $ x402-fl fund 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 1.5 --network base-sepolia
+  $ x402-fl fund 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100 --rpc-url http://localhost:9545`,
     )
     .action(async (address: `0x${string}`, amount: string, opts) => {
+      const rpcUrl = opts.rpcUrl ?? getNetwork(opts.network).rpcUrl;
       await fundCommand({
         address,
         amount,
-        anvilPort: opts.anvilPort,
+        rpcUrl,
       });
     });
 }
@@ -36,12 +38,11 @@ Examples:
 export interface FundOptions {
   address: `0x${string}`;
   amount: string;
-  anvilPort: number;
+  rpcUrl: string;
 }
 
 export async function fundCommand(options: FundOptions): Promise<void> {
-  const { address, amount, anvilPort } = options;
-  const rpcUrl = `http://localhost:${anvilPort}`;
+  const { address, amount, rpcUrl } = options;
 
   let result: Awaited<ReturnType<typeof fundAddress>>;
   try {
@@ -54,8 +55,8 @@ export async function fundCommand(options: FundOptions): Promise<void> {
         err.message.includes("Could not connect"))
     ) {
       console.error(
-        `Error: Could not connect to Anvil at ${rpcUrl}.\n` +
-          `Make sure Anvil is running (e.g. "x402-fl dev" or "anvil --fork-url ...").`,
+        `Error: Could not connect to RPC at ${rpcUrl}.\n` +
+          `Make sure your RPC is reachable (e.g. "x402-fl dev" or pass --rpc-url).`,
       );
       process.exit(1);
     }

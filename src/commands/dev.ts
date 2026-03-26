@@ -5,7 +5,8 @@ import type { Server } from "http";
 import { startAnvil, waitForAnvil, isFoundryInstalled, type AnvilInstance } from "../lib/anvil.js";
 import { startFacilitator } from "../lib/facilitator.js";
 import { fetchChainId } from "../lib/chain.js";
-import { defaults, networkId, getUsdcAddress, getNetwork, NETWORKS, DEFAULT_NETWORK } from "../lib/config.js";
+import { defaults, networkId, getUsdcAddress, getNetwork, NETWORKS, DEFAULT_NETWORK, type NetworkPreset } from "../lib/config.js";
+import type { NetworkConfig } from "../lib/facilitator.js";
 import { parsePort, parsePrivateKey } from "../lib/parsers.js";
 import { resolvePort } from "../lib/port.js";
 import { setVerbosity } from "../lib/log.js";
@@ -146,12 +147,17 @@ export async function devCommand(options: DevOptions): Promise<void> {
   await waitForAnvil(localRpcUrl, anvilTimeout);
   console.log(chalk.dim("Anvil is ready."));
 
-  // 3. Start facilitator
+  // 3. Start facilitator (register all networks; use local Anvil for forked chain)
   console.log(chalk.dim(`Starting facilitator on port ${facilitatorPort}...`));
+  const allNetworks: NetworkConfig[] = Object.values(NETWORKS).map(
+    (preset: NetworkPreset) =>
+      preset.chainId === chainId
+        ? { rpcUrl: localRpcUrl, chainId: preset.chainId }
+        : { rpcUrl: preset.rpcUrl, chainId: preset.chainId },
+  );
   const facilitator = await startFacilitator({
     port: facilitatorPort,
-    rpcUrl: localRpcUrl,
-    chainId,
+    networks: allNetworks,
     privateKey: options.privateKey,
   });
   server = facilitator.server;

@@ -1,59 +1,61 @@
 import chalk from "chalk";
 import boxen from "boxen";
-import type { Command } from "commander";
+import { Option, type Command } from "commander";
 import { createPublicClient, fetchChainId } from "../lib/chain.js";
 import {
-  defaults,
   DEFAULT_DECIMALS,
+  DEFAULT_NETWORK,
   formatTokenAmount,
+  getNetwork,
   getUsdcAddress,
   NETWORKS,
 } from "../lib/config.js";
-import { parseAddress, parsePort } from "../lib/parsers.js";
+import { parseAddress } from "../lib/parsers.js";
 import { ERC20_ABI } from "../lib/abi.js";
 
 export function register(program: Command) {
   program
     .command("balance")
-    .description("Get USDC balance for an address on local Anvil")
+    .description("Get USDC balance for an address")
     .argument("<address>", "0x-prefixed Ethereum address to check", parseAddress)
-    .option(
-      "--anvil-port <number>",
-      `Anvil JSON-RPC port`,
-      parsePort,
-      defaults.anvilPort,
+    .addOption(
+      new Option("--network <name>", "network preset")
+        .choices(Object.keys(NETWORKS))
+        .default(DEFAULT_NETWORK),
     )
+    .option("--rpc-url <url>", "RPC URL (overrides --network preset's default)")
     .addHelpText(
       "after",
       `
 Examples:
   $ x402-fl balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-  $ x402-fl balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --anvil-port 9545`,
+  $ x402-fl balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --network base-sepolia
+  $ x402-fl balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://localhost:9545`,
     )
     .action(async (address: `0x${string}`, opts) => {
+      const rpcUrl = opts.rpcUrl ?? getNetwork(opts.network).rpcUrl;
       await balanceCommand({
         address,
-        anvilPort: opts.anvilPort,
+        rpcUrl,
       });
     });
 }
 
 export interface BalanceOptions {
   address: `0x${string}`;
-  anvilPort: number;
+  rpcUrl: string;
 }
 
 export async function balanceCommand(options: BalanceOptions): Promise<void> {
-  const { address, anvilPort } = options;
-  const rpcUrl = `http://localhost:${anvilPort}`;
+  const { address, rpcUrl } = options;
 
   let chainId: number;
   try {
     chainId = await fetchChainId(rpcUrl);
   } catch {
     console.error(
-      `Error: Could not connect to Anvil at ${rpcUrl}.\n` +
-        `Make sure Anvil is running (e.g. "x402-fl dev" or "anvil --fork-url ...").`,
+      `Error: Could not connect to RPC at ${rpcUrl}.\n` +
+        `Make sure your RPC is reachable (e.g. "x402-fl dev" or pass --rpc-url).`,
     );
     process.exit(1);
   }
